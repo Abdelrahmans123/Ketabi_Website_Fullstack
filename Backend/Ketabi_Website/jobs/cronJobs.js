@@ -4,7 +4,9 @@ import User from "../models/User.js";
 import { sendEmail } from "./../utils/sendEmail.js";
 import Cart from "../models/Cart.js";
 import asyncHandler from "../utils/asyncHandler.js";
-
+import { Order } from "../models/Order.js";
+import { paymentStatus, itemType, orderStatus } from "../utils/orderEnums.js";
+import Book from "../models/Book.js";
 export const couponExpirationJob = () => {
   cron.schedule(
     "0 0 * * *",
@@ -80,6 +82,59 @@ export const cleanupOldCartsJob = () => {
       console.log(
         `Deleted ${result.deletedCount} old carts older than 30 days`
       );
+    })
+  );
+};
+
+export const orderCleanupJob = () => {
+  cron.schedule(
+    "*/15 * * * *",
+    asyncHandler(async () => {
+      const now = new Date();
+      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      const expiredOrders = await Order.find({
+        paymentStatus: paymentStatus.PENDING,
+        expiresAt: { $lt: fifteenMinutesAgo },
+      });
+
+      if (expiredOrders.length === 0) {
+        console.log("🕒 No expired orders found at this time.");
+        return;
+      }
+
+      console.log(`⚠️ Found ${expiredOrders.length} expired orders — restoring stock...`);
+
+      for (const order of expiredOrders) {
+        for (const item of order.items) {
+          if (item.type === itemType.PHYSICAL) {
+            await Book.updateOne(
+              { _id: item.book },
+              { $inc: { stock: item.quantity } }
+            );
+          }
+        }
+
+        order.paymentStatus = paymentStatus.EXPIRED;
+        order.orderStatus = orderStatus.CANCELLED;
+        await order.save();
+
+        await sendEmail({
+          to: order.userEmail,
+          subject: "Order Expired - Payment Timeout",
+          text: `
+Hi ${order.userName},
+
+Your order #${order.orderNumber} has expired because payment was not completed within 15 minutes.
+
+Any reserved items have been released back to stock.  
+If you still wish to purchase, please place a new order.
+
+- The Ketabi Team
+            `,
+        });
+
+        console.log(`✅ Order ${order.orderNumber} marked as expired & stock restored.`);
+      }
     })
   );
 };

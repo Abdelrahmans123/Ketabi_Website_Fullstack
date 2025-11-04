@@ -6,12 +6,18 @@ import { itemType } from "../utils/orderEnums.js";
 import { create, findById, findOne } from "../models/services/db.js";
 import Book from "../models/Book.js";
 
-
 export const getCart = asyncHandler(async (req, res, next) => {
-    const cart = await findOne(Cart, { user: req.user._id }, {}, "items.book");
+    let cart = await findOne({
+        model: Cart,
+        query: { user: req.user._id },
+        populate: {
+            path: "items.book",
+            select: "title author price discount stock",
+        },
+    });
     if (!cart) {
-        const cart = new Cart({ user: req.user._id, items: [], totalPrice: 0 });
-        await create(Cart, cart);
+        const cart = new Cart({ user: req.user._id, items: [] });
+        await create({ model: Cart, data: cart });
         return successResponse({
             res,
             statusCode: 200,
@@ -29,8 +35,11 @@ export const getCart = asyncHandler(async (req, res, next) => {
 
 export const addTocart = asyncHandler(async (req, res, next) => {
     let { book, quantity, type } = req.body;
-    let cart = await Cart.findOne({ user: req.user._id });
-    const bookDoc = await findById(Book, book);
+    let cart = await findOne({
+        model: Cart,
+        query: { user: req.user._id },
+    });
+    const bookDoc = await findById({ model: Book, id: book });
     if (type === itemType.EBOOK) {
         quantity = 1;
     }
@@ -57,11 +66,6 @@ export const addTocart = asyncHandler(async (req, res, next) => {
                             : bookDoc.price,
                 },
             ],
-            totalPrice:
-                quantity *
-                (type === itemType.EBOOK
-                    ? bookDoc.price * 0.45
-                    : bookDoc.price),
         });
     } else {
         const itemIndex = cart.items.findIndex(
@@ -97,37 +101,50 @@ export const addTocart = asyncHandler(async (req, res, next) => {
 });
 
 export const updateCart = asyncHandler(async (req, res, next) => {
-    const book = req.params.bookId.trim();
-    const { quantity } = req.body;
-    let cart = await Cart.findOne({ user: req.user._id });
+    const { book, quantity, type } = req.body;
+
+    if (!quantity && !type) {
+        const error = new AppError("missing properites to update", 404);
+        return next(error);
+    }
+
+    let cart = await findOne({ model: Cart, query: { user: req.user._id } });
     if (!cart) {
         const error = new AppError("Cart not found", 404);
         return next(error);
     }
-    const itemIndex = cart.items.findIndex(
-        (item) => item.book.toString() === book
-    );
+
+    const itemIndex = cart.items.findIndex((item) => item.book.toString() === book);
+
     if (itemIndex === -1) {
         const error = new AppError("Book not found in cart", 404);
         return next(error);
     }
-    const bookDoc = await Book.findById(book);
+
+    const bookDoc = await findById({ model: Book, id: book });
+    
     if (!bookDoc) {
         const error = new AppError("Book not found", 404);
         return next(error);
     }
-    if (
-        cart.items[itemIndex].type === itemType.PHYSICAL &&
-        quantity > bookDoc.stock
-    ) {
-        const error = new AppError(
-            `Not enough Stock for ${bookDoc.name} with id: ${bookDoc._id}`,
-            400
-        );
-        return next(error);
+
+    if (type) {
+        cart.items[itemIndex].type = type;
     }
-    cart.items[itemIndex].quantity = quantity;
+
+    if (cart.items[itemIndex].type === itemType.EBOOK) {
+        cart.items[itemIndex].quantity = 1;
+    } else {
+        if (quantity > bookDoc.stock) {
+            const error = new AppError(`Not enough Stock for ${bookDoc.name} with id: ${bookDoc._id}`, 400);
+            return next(error);
+        } else {
+            cart.items[itemIndex].quantity = quantity;
+        }
+    }
+
     await cart.save();
+
     return successResponse({
         res,
         statusCode: 200,
@@ -137,8 +154,8 @@ export const updateCart = asyncHandler(async (req, res, next) => {
 });
 
 export const removeFromCart = asyncHandler(async (req, res, next) => {
-    const book = req.params.bookId.toString();
-    let cart = await Cart.findOne({ user: req.user._id });
+    const { book } = req.body;
+    let cart = await findOne({ model: Cart, query: { user: req.user._id } });
     if (!cart) {
         const error = new AppError("Cart not found", 404);
         return next(error);
