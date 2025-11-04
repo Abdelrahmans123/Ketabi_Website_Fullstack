@@ -5,10 +5,13 @@ import User from "../models/User.js";
 import Book from "../models/Book.js";
 import Coupon from "../models/Coupon.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { deliveryStatus, itemType, paymentStatus } from "../utils/orderEnums.js";
+import { deliveryStatus, itemType, orderStatus, paymentStatus } from "../utils/orderEnums.js";
 import mongoose from "mongoose";
 import { findOneAndUpdate } from "../models/services/db.js";
 import PublisherOrder from "../models/publisherOrder.js";
+import Sale from "../models/Sale.js";
+import RefundRequest from "../models/refundRequests.js";
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
@@ -17,7 +20,6 @@ router.post(
     "/stripe-webhook",
     express.raw({ type: "application/json" }),
     async (req, res) => {
-        console.log('it is working!');
         const sig = req.headers["stripe-signature"];
         let event;
 
@@ -35,186 +37,322 @@ router.post(
         const paymentIntent = event.data.object;
         const orderNumber = paymentIntent?.metadata?.orderNumber;
 
-        if (!orderNumber) {
-            console.warn("No order number found in payment description.");
-            return res.status(200).send("No linked order.");
-        }
+        // responding to stripe
+        res.status(200).json({ received: true });
 
-        const order = await Order.findOne({ orderNumber });
-        if (!order) {
-            console.warn(`No matching order found for ${orderNumber}`);
-            return res.status(200).send("Order not found.");
-        }
+        (async () => {
+            try {
+                const order = await Order.findOne({ orderNumber });
+                switch (event.type) {
+                    case "payment_intent.succeeded":
+                        await handleSuccessfulPayment(order, paymentIntent);
+                        break;
 
-        try {
-            switch (event.type) {
-                //  Successful payment
-                case "payment_intent.succeeded": {
-                    const session = await mongoose.startSession();
-                    session.withTransaction(async () => {
-                        order.paymentStatus = paymentStatus.COMPLETED;
-                        order.transactionId = paymentIntent.id;
-                        let isShippingNeeded = false;
-                        for (const item of order.items) {
-                            item.paymentStatus = paymentStatus.COMPLETED
-                            if (item.type === itemType.EBOOK) item.deliveryStatus = deliveryStatus.DELIVERED;
-                            else isShippingNeeded = true;
-                        }
-                        await order.save();
-
-                        // group items by publisher
-                        const groupItemsByPublisher = order.items.reduce((acc, item) => {
-                            const pubId = item.publisher.toString();
-                            if (!acc[pubId]) acc[pubId] = [];
-                            acc[pubId].push(item);
-                            return acc;
-                        }, {});
-
-                        // create one publisher order per publisher
-                        for (const [publisherId, publisherItems] of Object.entries(groupItemsByPublisher)) {
-                            const totalPrice = publisherItems.reduce((sum, item) => sum + (item.price * item.quantity) - ((item.discount || 0) / 100) * item.price * item.quantity,
-                                0
-                            );
-                            const pubOrder = {
-                                publisher: publisherId,
-                                order: order._id,
-                                name: order.userName,
-                                email: order.userEmail,
-                                items: publisherItems.map(item => ({
-                                    book: item.book,
-                                    quantity: item.quantity,
-                                    price: item.price,
-                                    discount: item.discount,
-                                    type: item.type,
-                                    deliveryStatus: item.deliveryStatus,
-                                    paymentStatus: paymentStatus.COMPLETED
-                                })),
-                                coupon: order.coupon || "No Coupon",
-                                couponDiscount: order.discountApplied || 0,
-                                totalPrice
-                            }
-                            if (isShippingNeeded) {
-                                pubOrder.shippingAddress = order.shippingAddress;
-                            }
-                            await PublisherOrder.create(pubOrder);
-                        }
-
-                        // Update stock quantities
+                    case "payment_intent.payment_failed":
+                    case "payment_intent.canceled":
                         for (const item of order.items) {
                             if (item.type === itemType.PHYSICAL) {
-                                await Book.findByIdAndUpdate(item.book, {
-                                    $inc: { stock: -item.quantity },
-                                });
+                                await Book.updateOne(
+                                    { _id: item.book },
+                                    { $inc: { stock: item.quantity } }
+                                );
                             }
                         }
+                        order.paymentStatus = paymentStatus.FAILED;
+                        order.orderStatus = orderStatus.CANCELLED;
+                        await order.save();
 
-                        // Update coupon usage
-                        if (order.coupon && order.coupon !== "No Coupon") {
-                            await Coupon.findOneAndUpdate(
-                                { code: order.coupon },
-                                { $inc: { numOfUsers: 1 } }
-                            );
-                        }
-                    });
-
-                    session.endSession();
-
-                    // Send confirmation emails
-                    await sendEmail({
-                        to: order.userEmail,
-                        subject: "Order Confirmation",
-                        text: `Your payment for Order ${order.orderNumber} was successful.`,
-                    });
-
-                    // Send gift email
-                    if (order.isGift && order.recipientEmail) {
                         await sendEmail({
-                            to: order.recipientEmail,
-                            subject: "Gift Received",
-                            text: `You received a gift from ${order.userEmail}! Check your Ketabi library.`
+                            to: order.userEmail,
+                            subject: "❌ Payment Failed — Order Canceled",
+                            html: `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; padding: 20px;">
+          <h2 style="color: #e74c3c; text-align: center;">❌ Payment Failed — Order Canceled</h2>
+
+          <p>Hi <strong>${order.userName}</strong>,</p>
+
+          <p>Unfortunately, your payment for <strong>Order #${order.orderNumber}</strong> could not be completed.</p>
+
+          <p>As a result, the order has been canceled, and any reserved stock for physical books has been restored.</p>
+
+          <p>If this was a mistake, you can place your order again from your cart or contact our support team for help.</p>
+
+          <p style="margin-top: 25px;">Thank you for shopping with us,</p>
+          <p style="font-weight: bold;">— The Ketabi Team</p>
+
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+          <p style="font-size: 12px; color: #777; text-align: center;">
+            This is an automated message. Please do not reply to this email.
+          </p>
+        </div>
+        `,
                         });
-                    }
+                        break;
 
-                    // add books to the library
-                    try {
-                        const booksToAdd = order.items
-                            .filter(item => item.type === itemType.EBOOK)
-                            .map(item => item.book);
-
-                        console.log('BOoks to add: ', booksToAdd);
-
-                        if (booksToAdd.length > 0) {
-                            if (order.isGift && order.recipientEmail) {
-                                const recipient = await findOneAndUpdate(
-                                    User,
-                                    { email: order.recipientEmail },
-                                    { $addToSet: { library: { $each: booksToAdd } } } // prevent duplicates
-                                );
-                                console.log("recipient: ", recipient);
-
-                                if (!recipient) {
-                                    console.warn(`Recipient not found: ${order.recipientEmail}`);
-                                } else {
-                                    console.log(`Added ${booksToAdd.length} books to ${recipient.email}'s library (gift).`);
-                                }
-                            } else {
-                                const buyer = await findOneAndUpdate(
-                                    User,
-                                    { email: order.userEmail },
-                                    { $addToSet: { library: { $each: booksToAdd } } }
-                                );
-                                console.log("buyer: ", buyer);
-                                if (!buyer) {
-                                    console.warn(`Buyer not found: ${order.userEmail}`);
-                                } else {
-                                    console.log(`Added ${booksToAdd.length} books to ${buyer.email}'s library.`);
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.error(`Error adding books to library for Order ${order.orderNumber}: ${error.message}`);
-                    }
-
-                    console.log(`Payment succeeded for Order ${orderNumber}`);
-                    break;
+                    default:
+                        console.log(`Unhandled Stripe event: ${event.type}`);
                 }
-
-                // Failed payment
-                case "payment_intent.payment_failed": {
-                    order.paymentStatus = paymentStatus.FAILED;
-                    await order.save();
-
-                    const failReason =
-                        paymentIntent.last_payment_error?.message || "Unknown reason";
-
-                    await sendEmail({
-                        to: order.userEmail,
-                        subject: "Payment Failed",
-                        text: `Your payment for Order ${order.orderNumber} failed: ${failReason}`,
-                    });
-
-                    console.log(`Payment failed for Order ${orderNumber}: ${failReason}`);
-                    break;
-                }
-
-                // Canceled payment
-                case "payment_intent.canceled": {
-                    order.paymentStatus = "CANCELED";
-                    await order.save();
-                    console.log(`Payment canceled for Order ${orderNumber}`);
-                    break;
-                }
-
-                default:
-                    console.log(`Unhandled Stripe event: ${event.type}`);
+            } catch (err) {
+                console.error(`Async webhook task error: ${err.message}`);
             }
-
-            res.status(200).json({ received: true });
-        } catch (err) {
-            console.error(`Webhook processing error: ${err.message}`);
-            res.status(500).send("Internal webhook error.");
-        }
+        })();
     }
 );
+
+async function handleSuccessfulPayment(order, paymentIntent) {
+
+    // Prevent processing expired or already-paid orders
+    if (order.paymentStatus === paymentStatus.EXPIRED) {
+        await RefundRequest.create({
+            order: order._id,
+            user: order.user,
+            paymentIntentId: paymentIntent.id,
+            reason: "EXPIRED_ORDER",
+            amount: paymentIntent.amount / 100,
+            status: "PENDING",
+            paymentMethod: order.paymentMethod
+        });
+
+        await sendEmail({
+            to: order.userEmail,
+            subject: "⚠️ Payment Pending Review — Order Expired",
+            html: `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; padding: 20px;">
+    <h2 style="color: #e74c3c; text-align: center;">Order Expired — Payment Pending Review</h2>
+
+    <p>Hi <strong>${order.userName}</strong>,</p>
+
+    <p>We received your payment for <strong>Order #${order.orderNumber}</strong>, 
+    but unfortunately, the order had already expired before the payment was confirmed.</p>
+
+    <p>A refund request has been automatically created and is currently 
+    <strong>pending review</strong> by our support team. You’ll receive an update as soon as it’s processed.</p>
+
+    <p style="margin-top: 25px;">Thank you for your understanding,</p>
+    <p style="font-weight: bold;">— The Ketabi Team</p>
+
+    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+
+    <p style="font-size: 12px; color: #777; text-align: center;">
+      This is an automated message. Please do not reply to this email.
+    </p>
+  </div>
+  `,
+        });
+
+        return;
+    }
+
+    const session = await mongoose.startSession();
+    try {
+        await session.withTransaction(async () => {
+            order.paymentStatus = paymentStatus.COMPLETED;
+            order.transactionId = paymentIntent.id;
+            order.orderStatus = orderStatus.PROCESSING;
+            let isShippingNeeded = false;
+            for (const item of order.items) {
+                item.paymentStatus = paymentStatus.COMPLETED;
+                if (item.type === itemType.EBOOK)
+                    item.deliveryStatus = deliveryStatus.DELIVERED;
+                else isShippingNeeded = true;
+            }
+
+            await order.save({ session });
+
+            // Group items by publisher
+            const grouped = order.items.reduce((acc, item) => {
+                const pubId = item.publisher.toString();
+                if (!acc[pubId]) acc[pubId] = [];
+                acc[pubId].push(item);
+                return acc;
+            }, {});
+
+            for (const [publisherId, items] of Object.entries(grouped)) {
+                const totalPrice = items.reduce(
+                    (sum, item) =>
+                        sum +
+                        item.price * item.quantity -
+                        ((item.discount || 0) / 100) * item.price * item.quantity,
+                    0
+                );
+                const finalPrice = totalPrice * (1 - (order.discountApplied || 0) / 100);
+                const pubOrder = {
+                    publisher: publisherId,
+                    order: order._id,
+                    name: order.userName,
+                    email: order.userEmail,
+                    items: items.map((item) => ({
+                        book: item.book,
+                        quantity: item.quantity,
+                        price: item.price,
+                        discount: item.discount,
+                        type: item.type,
+                        deliveryStatus: item.deliveryStatus,
+                        paymentStatus: paymentStatus.COMPLETED,
+                    })),
+                    coupon: order.coupon || "No Coupon",
+                    couponDiscount: order.discountApplied || 0,
+                    totalPrice,
+                    finalPrice,
+                    ...(isShippingNeeded && { shippingAddress: order.shippingAddress }),
+                };
+
+                const [createdPubOrder] = await PublisherOrder.create([pubOrder], { session });
+
+                // Record in Sales
+                const saleItems = items.map((item) => ({
+                    book: item.book,
+                    quantity: item.quantity,
+                    price: item.price,
+                    discount: item.discount,
+                    type: item.type,
+                    total:
+                        item.price * item.quantity -
+                        ((item.discount || 0) / 100) * item.price * item.quantity,
+                }));
+
+                await Sale.create(
+                    [
+                        {
+                            publisher: publisherId,
+                            publisherOrder: createdPubOrder._id,
+                            order: order._id,
+                            items: saleItems,
+                            totalAmount: saleItems.reduce((sum, i) => sum + i.total, 0),
+                            finalPrice: (saleItems.reduce((sum, i) => sum + i.total, 0)) * (1 - (order.discountApplied || 0) / 100),
+                            coupon: order.coupon || "No Coupon",
+                            couponDiscount: order.discountApplied || 0,
+                            paymentIntentId: paymentIntent.id,
+                            paymentMethod: order.paymentMethod
+                        },
+                    ],
+                    { session }
+                );
+            }
+
+            // Coupon usage
+            if (order.coupon && order.coupon !== "No Coupon") {
+                await Coupon.findOneAndUpdate(
+                    { code: order.coupon },
+                    { $inc: { numOfUsers: 1 } },
+                    { session }
+                );
+            }
+        });
+    } finally {
+        await session.endSession();
+    }
+
+    // book list for email 
+    const bookIds = order.items.map(item => item.book);
+    const books = await Book.find({ _id: { $in: bookIds } }).select("name");
+    const bookNames = books.map(b => `- ${b.name}`).join("\n");
+
+    // Adjust user info if this is a gift
+    let buyerName = order.userName;
+    let buyerEmail = order.userEmail;
+    let recipientName = buyerName;
+    let recipientEmail = buyerEmail;
+
+    if (order.isGift && order.recipientEmail) {
+        recipientEmail = order.recipientEmail;
+        recipientName = order.recipientName || "Gift Recipient";
+        order.userName = recipientName;
+        order.userEmail = recipientEmail;
+    }
+
+    // 
+    // Email to buyer
+    sendEmail({
+        to: buyerEmail,
+        subject: "✅ Order Confirmation — Payment Successful",
+        html: `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; padding: 20px;">
+    <h2 style="color: #2ecc71; text-align: center;">🎉 Order Confirmed!</h2>
+
+    <p>Hi <strong>${buyerName}</strong>,</p>
+
+    <p>Your payment for <strong>Order #${order.orderNumber}</strong> was successful.</p>
+
+    <p><strong>Books you purchased:</strong></p>
+    <div style="background: #f9f9f9; padding: 10px 15px; border-radius: 6px; white-space: pre-line;">
+      ${bookNames}
+    </div>
+
+    ${order.isGift
+                ? `<p>You sent these as a gift to <strong>${recipientEmail}</strong>.</p>`
+                : `<p>Thank you for your purchase! We hope you enjoy your new books 📚.</p>`
+            }
+
+    <p style="margin-top: 25px;">Warm regards,</p>
+    <p style="font-weight: bold;">— The Ketabi Team</p>
+
+    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+    <p style="font-size: 12px; color: #777; text-align: center;">
+      This is an automated message. Please do not reply to this email.
+    </p>
+  </div>
+  `,
+    }).catch(console.error);
+
+    // Gift email
+    if (order.isGift && order.recipientEmail) {
+        sendEmail({
+            to: recipientEmail,
+            subject: "🎁 You've Received a Gift from Ketabi!",
+            html: `
+    <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; padding: 20px;">
+      <h2 style="color: #3498db; text-align: center;">🎁 You've Received a Gift!</h2>
+
+      <p>Hi <strong>${recipientName}</strong>,</p>
+
+      <p>You’ve received the following books as a gift from <strong>${buyerEmail}</strong>:</p>
+
+      <div style="background: #f9f9f9; padding: 10px 15px; border-radius: 6px; white-space: pre-line;">
+        ${bookNames}
+      </div>
+
+      ${order.personalizedMessage
+                    ? `<p style="margin-top: 15px;"><em>Personal message:</em> "${order.personalizedMessage}"</p>`
+                    : ""
+                }
+
+      <p>Enjoy your reading adventure 📖!</p>
+
+      <p style="margin-top: 25px;">With love,</p>
+      <p style="font-weight: bold;">— The Ketabi Team</p>
+
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #777; text-align: center;">
+        This is an automated message. Please do not reply to this email.
+      </p>
+    </div>
+    `,
+        }).catch(console.error);
+    }
+
+    // library update 
+    updateUserBooks(order).catch(console.error);
+}
+
+async function updateUserBooks(order) {
+    const allBooks = order.items.map((item) => item.book);
+    const ebooks = order.items
+        .filter((item) => item.type === itemType.EBOOK)
+        .map((item) => item.book);
+
+    const update = {
+        $addToSet: { purchasedBooks: { $each: allBooks } },
+    };
+    if (ebooks.length) update.$addToSet.library = { $each: ebooks };
+
+    const email = order.isGift ? order.recipientEmail : order.userEmail;
+    await findOneAndUpdate({
+        model: User,
+        query: { email },
+        data: update,
+    });
+
+}
 
 export default router;

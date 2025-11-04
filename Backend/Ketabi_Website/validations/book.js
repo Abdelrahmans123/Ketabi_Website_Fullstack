@@ -14,7 +14,8 @@ export const createSchema = Joi.object({
   description: Joi.string().max(1000).optional().messages({
     "string.max": "Description must be at most 1000 characters",
   }),
-  Edition: Joi.string().max(50).optional().messages({
+  Edition: Joi.string().max(50).required().messages({
+    "any.required": "Edition is required",
     "string.max": "Edition must be at most 50 characters",
   }),
   categoryName: Joi.string().min(2).max(50).required().messages({
@@ -53,10 +54,24 @@ export const createSchema = Joi.object({
     .messages({
       "any.only": "Status must be either 'in stock' or 'out of stock'",
     }),
-  publisher: Joi.string().required().messages({
+  /* publisher: Joi.string().required().messages({
     "string.empty": "Publisher ID is required",
     "any.required": "Publisher ID is required"
-  }),
+  }), */
+});
+
+export const getBookByIdSchema = Joi.object({
+  id: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .message("Invalid book ID: must be a valid MongoDB ObjectId")
+    .required()
+});
+
+export const updateByBookIdSchema = Joi.object({
+  id: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .message("Invalid book ID: must be a valid MongoDB ObjectId")
+    .required()
 });
 
 export const updateSchema = Joi.object({

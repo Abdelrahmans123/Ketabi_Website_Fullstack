@@ -30,6 +30,7 @@ const userSchema = new mongoose.Schema(
         phone: {
             type: String,
             required: true,
+            unique: true,
         },
         address: [addressSchema],
         role: {
@@ -77,12 +78,9 @@ const userSchema = new mongoose.Schema(
         twoFactorOtp: String,
         twoFactorOtpExpires: Date,
         lastLoginAt: { type: Date, default: null },
-        library: [
-            { type: mongoose.Schema.Types.ObjectId, ref: "Book" }
-        ],
-        booksPublished: [
-            { type: mongoose.Schema.Types.ObjectId, ref: "Book" }
-        ],
+        library: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
+        purchasedBooks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
+        booksPublished: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
         twoFactorOtpAttempts: { type: Number, default: 0 },
         provider: {
             type: String,
@@ -93,8 +91,30 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
+        refreshToken: {
+            type: String,
+            default: null,
+        },
+        refreshTokenExpiresAt: {
+            type: Date,
+            default: null,
+        },
+        phoneOtp: { type: String, default: null },
+        phoneOtpExpires: { type: Date, default: null },
+        phoneOtpAttempts: { type: Number, default: 0 },
+        isPhoneVerified: { type: Boolean, default: false },
+        phoneVerifiedAt: { type: Date, default: null },
+        telegramChatId: {
+            type: String,
+            required: false,
+            index: true,
+        },
+        telegramUsername: {
+            type: String,
+            required: false,
+        },
     },
-
 
     { timestamps: true }
 );
