@@ -1,11 +1,11 @@
 import express from "express";
-import cors from "cors";
+
 import authRoutes from "./routes/auth.js";
 import genreRoutes from "./routes/genre.js";
 import bookRouter from "./routes/book.js";
 import ticketRoutes from "./routes/ticket.js";
 import { connectMongoDB, connectRedisDB } from "./config/db.js";
-import HTTPStatusText from "./utils/HTTPStatusText.js";
+import { swaggerDocs } from "./config/swagger.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import cartRouter from "./routes/cart.js";
 import orderRouter from "./routes/order.js";
@@ -16,45 +16,37 @@ import { initializeIO } from "./socketIO/index.js";
 import couponRouter from "./routes/coupon.js";
 import publisherRoutes from "./routes/publisher.js";
 import reviewRoutes from "./routes/review.js";
-import stripeRouter from './controllers/webhookController.js';
+import stripeRouter from "./controllers/webhookController.js";
+import adminRefundRoutes from "./routes/adminRefund.js";
+import ragChatbot from "./chatbot/gemini-rag.js";
 import helmet from "helmet";
-import { rateLimit } from "express-rate-limit";
 import {
     cleanupOldCartsJob,
     couponExpirationJob,
     deleteUnconfirmedUsersJob,
     inactiveUserReminderJob,
+    orderCleanupJob,
 } from "./jobs/cronJobs.js";
+import { apiLimiter } from "./middlewares/rateLimiter.js";
+import { defineCors } from "./middlewares/cors.js";
+import { notFoundHandler } from "./middlewares/notFound.js";
+import salesRouter from "./routes/adminSales.js";
+import "./utils/telegramBot.js";
 const bootstrap = async () => {
     const app = express();
     const PORT = process.env.PORT || 3000;
+    // *---MongoDB & Redis Connection---*
     await connectMongoDB();
     await connectRedisDB();
     app.use("/api/webhooks", stripeRouter);
+    // *---Middlewares---*
     app.use(express.json());
-    const whitelist = [process.env.CLIENT_URL];
-    const corsOptions = {
-        origin: function (origin, callback) {
-            if (whitelist.indexOf(origin) !== -1 || !origin) {
-                callback(null, true);
-            } else {
-                callback(new Error("Not allowed by CORS"));
-            }
-        },
-        credentials: true,
-    };
-    app.use(cors(corsOptions));
+    defineCors(app);
     app.use(createSessionMiddleware());
     app.use(morganLogger);
     app.use(helmet());
-    app.use(
-        rateLimit({
-            windowMs: 15 * 60 * 1000,
-            limit: 10000,
-            message: "Too many requests from this IP, please try again later.",
-        })
-    );
-    app.use("/webhook/stripe", stripeRouter);
+    app.use(apiLimiter);
+    // *---Routes---*
     app.use("/api/auth", authRoutes);
     app.use("/api/genres", genreRoutes);
     app.use("/api/books", bookRouter);
@@ -64,24 +56,31 @@ const bootstrap = async () => {
     app.use("/api/users", profileRouter);
     app.use("/api/coupons", couponRouter);
     app.use("/api/tickets", ticketRoutes);
-    app.use("/api/users", profileRouter);
     app.use("/api/reviews", reviewRoutes);
-    app.all("/{*dummy}", (req, res, next) => {
-        res.status(404).json({
-            message: "Route Not Found",
-            status: HTTPStatusText.FAILURE,
-            data: null,
-            code: 404,
+    app.use("/api/admin/refunds", adminRefundRoutes);
+    app.use("/api/admin/sales", salesRouter);
+    swaggerDocs(app);
+    app.post("/api/chat", async (req, res) => {
+        const { message } = req.body;
+
+        const result = await ragChatbot.chat(message);
+
+        res.json({
+            response: result.response,
+            books: result.books,
         });
     });
+    // *---Error Handlers---*
+    app.all("/{*dummy}", notFoundHandler);
     app.use(errorHandler);
-
     const server = app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
+        console.log("Telegram bot initialized");
         couponExpirationJob();
         deleteUnconfirmedUsersJob();
         inactiveUserReminderJob();
         cleanupOldCartsJob();
+        orderCleanupJob();
     });
     initializeIO(server);
 };
