@@ -1,0 +1,67 @@
+<nav class="navbar navbar-expand-lg navbar-custom">
+  <div class="container-fluid px-5">
+    <!-- Logo -->
+    <a class="navbar-brand" href="/">
+      <img src="logo.png" alt="Ketabi Logo" class="navbar-logo">
+    </a>
+
+    <!-- Toggle Button for Mobile -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Navigation Links -->
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav m-auto align-items-center">
+
+        <!-- Home Link -->
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+
+        <!-- Shop Link -->
+        <li class="nav-item">
+          <a class="nav-link" href="/shop">Shop</a>
+        </li>
+
+        <!-- About Link -->
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+
+        <!-- Contact Button -->
+        <li class="nav-item">
+          <button class="btn btn-contact">Contact</button>
+        </li>
+
+      </ul>
+
+      <!-- Icons on the Right -->
+      <ul class="navbar-nav align-items-center">
+
+        <!-- Cart Icon -->
+        <li class="nav-item">
+          <a href="/cart" class="icon-link cart-icon" title="Shopping Cart">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
+          </a>
+        </li>
+
+        <!-- Login Link -->
+        <li class="nav-item">
+          <a href="/login" class="nav-link auth-link" title="Login">
+            Login
+          </a>
+        </li>
+
+        <!-- Register Link -->
+        <li class="nav-item">
+          <a href="/register" class="nav-link auth-link" title="Register">
+            Register
+          </a>
+        </li>
+
+      </ul>
+    </div>
+  </div>
+</nav>
