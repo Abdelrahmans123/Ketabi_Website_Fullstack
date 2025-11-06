@@ -1,0 +1,16 @@
+/* Minimal custom theme placeholder.
+   Replace with your real theme (Angular Material theming, variables, etc.) if needed.
+*/
+
+/* Example CSS variables you can use in your app */
+:root {
+  --app-primary: #1976d2;
+  --app-accent:  #e91e63;
+  --app-warn:    #f44336;
+}
+
+/* Basic fallback styles */
+body {
+  background: #fff;
+  color: #212121;
+}
