@@ -1,0 +1,21 @@
+
+
+<div class="card book-card h-100">
+  <img [src]="image" class="card-img-top" [alt]="title">
+
+  <div class="card-overlay">
+    <div class="overlay-controls">
+      <a href="#" class="overlay-link btn-cart" title="Add to cart" aria-label="Add to cart">
+        <i class="fa fa-shopping-cart" aria-hidden="true"></i><span class="visually-hidden">Add to cart</span>
+      </a>
+      <a href="#" class="overlay-link btn-details" title="View details" aria-label="View details">
+         <i class="fa fa-eye" aria-hidden="true"></i><span class="visually-hidden">View details</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <h6 class="card-title text-truncate">{{ title }}</h6>
+    <p class="card-text small text-muted text-truncate">{{ author }}</p>
+  </div>
+</div>
