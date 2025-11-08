@@ -5,7 +5,7 @@ import { Component, Input } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './book-card.html',
-  styleUrl: './book-card.css',
+    styleUrls: ['./book-card.css'], 
 })
 export class BookCard {
   @Input() image: string = '';
