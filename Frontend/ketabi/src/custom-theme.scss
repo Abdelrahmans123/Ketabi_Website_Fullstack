@@ -7,10 +7,16 @@
   --app-primary: #1976d2;
   --app-accent:  #e91e63;
   --app-warn:    #f44336;
+   --pickled-bean: #704020;
+  --walnut: #704018;
+  --light-brown: #b08a60;
+  --dark-bg: #e7c29d;
+  --text-light: #f5f3f0;
 }
 
 /* Basic fallback styles */
 body {
-  background: #fff;
-  color: #212121;
+  background-color: var(--dark-bg);
+  color: var(--text-light);
+  font-family: "Poppins", "Segoe UI", sans-serif;
 }

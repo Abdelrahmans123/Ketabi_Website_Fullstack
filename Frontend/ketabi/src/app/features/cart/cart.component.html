@@ -1,0 +1,111 @@
+<section class="cart-container container py-5 mt-2 my-2">
+  <!-- 🛒 If cart has items -->
+  @if (cartItems$ | async; as items) {
+  @if (items.length > 0) {
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a routerLink="/" class="text-decoration-none text-light-brown">Home</a>
+      </li>
+      <li class="breadcrumb-item active text-white" aria-current="page">Cart</li>
+    </ol>
+  </nav>
+
+  <div class="cart-header mb-4 d-flex justify-content-between align-items-center">
+    <h2 class="cart-title">🛍️ Your Cart</h2>
+    <button class="btn btn-clear" (click)="clear()">
+      <i class="fa-solid fa-trash"></i> Clear Cart
+    </button>
+  </div>
+
+  <!-- Cart + Summary Wrapper -->
+  <div class="row g-4">
+    <!-- 🧾 Cart Items -->
+    <div class="col-12 col-lg-8">
+      <div *ngFor="let item of items; trackBy: trackById" class="cart-item shadow-sm">
+        <div class="d-flex align-items-center gap-3">
+          <img [src]="item.image.url" alt="{{ item.name }}" class="cart-item-img" />
+
+          <div class="flex-grow-1">
+            <h5 class="mb-1 text-white">{{ item.name }}</h5>
+            <small class="text-light-brown">Type: {{ (item.type === 'physical' ? 'Hard Copy' : "Ebook")| titlecase
+              }}</small><br />
+            <small class="text-secondary">
+              <div class="price">
+                @if (item.discount > 0) {
+                <small class="text-muted text-decoration-line-through me-2">
+                  {{ (item.type === "physical" ? item.price : item.price * 0.45) | currency:'USD' }}
+                </small>
+                <small class="text-secondary fw-semibold">
+                  {{ (item.type === "physical" ? item.price * (1 - item.discount / 100) : item.price *0.45 * (1 - item.discount / 100)) | currency:'USD' }}
+                </small>
+                } @else {
+                <small class="text-secondary">
+                  {{ (item.type === "physical" ? item.price : item.price *0.45) | currency:'USD' }}
+                </small>
+                }
+              </div>
+
+            </small>
+          </div>
+
+          <div class="quantity-controls ms-auto">
+            <button (click)="decrease(item)" class="qty-btn">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <span>{{ item.quantity }}</span>
+            <button (click)="increase(item)" class="qty-btn">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+
+          <button class="btn-change" (click)="changeType(item)">
+            <i class="fa-solid fa-repeat"></i>
+          </button>
+
+          <button class="remove-btn" (click)="remove(item)">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!--  Summary -->
+    <div class="col-12 col-lg-4">
+      <div class="summary-box shadow-sm">
+        <h4 class="text-white mb-3">Order Summary</h4>
+        <div class="d-flex justify-content-between mb-2 text-light-brown">
+          <span>Subtotal (tax included)</span>
+          <span>{{ total$ | async | currency:'USD' }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2 text-light-brown">
+          <span>Delivery Fees</span>
+          <span>{{  deliveryFee | currency:'USD' }}</span>
+        </div>
+        <hr class="border-light-brown" />
+        <div class="d-flex justify-content-between fw-bold text-white">
+          <span>Total</span>
+          <span>{{ totalOrder | currency:'USD' }}</span>
+        </div>
+        
+        <button class="btn btn-checkout mt-4 w-100">
+          <i class="fa-solid fa-credit-card me-2"></i> Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+  @else {
+  <!-- 🚫 Empty Cart -->
+  <div class="text-center py-5 empty-cart">
+    <i class="fa-solid fa-cart-shopping fa-3x text-light-brown mb-3"></i>
+    <h4 class="text-white">Your cart is empty</h4>
+    <p class="text-secondary">Browse our collection and add something you love!</p>
+    <a routerLink="/books/Arabic" class="btn btn-back">
+      <i class="fa-solid fa-book-open"></i> Go to Books
+    </a>
+  </div>
+  }
+  }
+</section>
