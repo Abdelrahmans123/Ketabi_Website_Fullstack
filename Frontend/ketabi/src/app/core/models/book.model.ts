@@ -10,9 +10,14 @@ export interface Book {
   stock: number;
   status: string;
 }
-
 export interface BookResponse {
   status: string;
   message: string;
-  data: Book[];
+  code: number;
+  data: {
+    books: Book[];
+    pagination: any;
+  };
 }
+
+
