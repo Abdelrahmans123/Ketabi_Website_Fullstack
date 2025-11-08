@@ -1,0 +1,18 @@
+<div class="book-list-container">
+  <h2>Available Books</h2>
+
+  <div *ngIf="isLoading">Loading books...</div>
+  <div *ngIf="errorMessage">{{ errorMessage }}</div>
+<div class="books-grid" *ngIf="!isLoading && books.length">
+  <app-book-card
+    *ngFor="let book of books"
+    [title]="book.name"
+    [author]="book.author"
+  [image]="book.image?.url || 'assets/default-book.jpg'">  </app-book-card>
+</div>
+
+
+  <div *ngIf="!isLoading && !books.length">
+    No books found.
+  </div>
+</div>
