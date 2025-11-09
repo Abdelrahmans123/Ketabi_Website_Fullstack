@@ -24,7 +24,8 @@ import { roleEnum } from "../utils/roleEnum.js";
 import mongoose from "mongoose"; // added for ObjectId validation
 
 export const AddBook = asyncHandler(async (req, res, next) => {
-    req.body.publisher = req.user.id;
+    const publisherId = req.user.id;
+    req.body.publisher = publisherId;
 
     if (!req.body.genre_id) {
         return next(new AppError("genre_id is required", 400));

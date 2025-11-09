@@ -23,7 +23,7 @@ export class PublisherOrdersComponent implements OnInit {
     totalPages = 0;
     total = 0;
 
-    // Update modal state
+    
     showUpdateModal = false;
     selectedOrder: PublisherOrder | null = null;
     selectedItemIndex: number = -1;
@@ -111,7 +111,7 @@ export class PublisherOrdersComponent implements OnInit {
             paymentStatus: formValue.paymentStatus || undefined
         };
 
-        // Remove undefined values
+       
         if (!updateData.deliveryStatus) delete updateData.deliveryStatus;
         if (!updateData.paymentStatus) delete updateData.paymentStatus;
 
@@ -128,7 +128,7 @@ export class PublisherOrdersComponent implements OnInit {
                 console.log('Backend:', response);
                 this.updating = false;
                 this.closeUpdateModal();
-                // Reload orders
+               
                 const id = this.publisherId || this.getCurrentUserId();
                 if (id) {
                     this.loadOrders(id, this.currentPage);

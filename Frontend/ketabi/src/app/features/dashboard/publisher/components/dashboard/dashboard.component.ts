@@ -61,7 +61,6 @@ export class PublisherDashboardComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    // Backend pagination schema enforces a minimum limit of 5 items per request
     this.publisherService.getPublishedBooks(publisherId, 1, 5).subscribe({
       next: (booksResponse: PublisherBooksResponse) => {
         this.stats.totalBooks = booksResponse.data.totalBooks || 0;
