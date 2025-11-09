@@ -10,11 +10,9 @@ export const routes: Routes = [
   },
   {
     path: 'books',
-    component: BookListComponent,
-  },
-  {
-    path: 'books/:category',
-    component: BookListComponent,
+    loadChildren: () => import('./features/books/book.routes').then((m) => m.BOOK_ROUTES),
+    canActivate: [AuthGuard],
+    title: 'Books',
   },
   {
     path: 'dashboard',
