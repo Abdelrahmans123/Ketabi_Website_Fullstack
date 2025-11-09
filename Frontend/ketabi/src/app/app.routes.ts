@@ -1,17 +1,16 @@
 import { Routes } from '@angular/router';
 import { BookListComponent } from './features/books/pages/book-list/book-list';
 import { AuthGuard } from './core/guards/auth.guard';
+import { CartComponent } from './features/cart/cart.component';
 import { RoleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'books', pathMatch: 'full' },
   {
     path: 'books',
-    component: BookListComponent,
-  },
-  {
-    path: 'books/:category',
-    component: BookListComponent,
+    loadChildren: () => import('./features/books/book.routes').then((m) => m.BOOK_ROUTES),
+    canActivate: [AuthGuard],
+    title: 'Books',
   },
   {
     path: 'auth',
@@ -60,6 +59,7 @@ export const routes: Routes = [
       },
     ],
   },
+  { path: 'cart', component: CartComponent },
   {
     path: '**',
     redirectTo: 'auth/login',

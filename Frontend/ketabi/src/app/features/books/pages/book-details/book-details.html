@@ -1,0 +1,8 @@
+<h2>{{ book?.name }}</h2>
+<p><strong>Author:</strong> {{ book?.author }}</p>
+<p><strong>Category:</strong> {{ book?.genre?.name }}</p>
+<p><strong>Price:</strong> {{ book?.price | currency }}</p>
+<p><strong>Description:</strong> {{ book?.description }}</p>
+<p><strong>Stock:</strong> {{ book?.stock }}</p>
+<p><strong>Status:</strong> {{ book?.status }}</p>
+<img [src]="book?.image?.url || 'default-book.jpg'" alt="{{ book?.name }}" />

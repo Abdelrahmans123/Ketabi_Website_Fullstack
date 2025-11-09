@@ -1,0 +1,165 @@
+/* Theme colors */
+:root {
+  --pickled-bean: #704020;
+  --walnut: #704018;
+  --light-brown: #b08a60;
+  --dark-bg: #1e1a16;
+  --text-light: #f5f3f0;
+}
+
+.cart-container {
+  background-color: var(--dark-bg);
+  color: var(--text-light);
+  border-radius: 12px;
+}
+
+.text-light-brown {
+  color: var(--light-brown);
+}
+.border-light-brown {
+  border-color: var(--light-brown) !important;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  background: transparent;
+  color: var(--text-light);
+}
+.breadcrumb a {
+  color: var(--light-brown);
+}
+.breadcrumb a:hover {
+  color: var(--text-light);
+}
+
+/* Cart Header */
+.cart-title {
+  color: var(--text-light);
+  font-weight: 600;
+}
+.btn-clear {
+  background-color: transparent;
+  color: var(--light-brown);
+  border: 1px solid var(--light-brown);
+  border-radius: 8px;
+  padding: 5px 12px;
+  transition: 0.2s ease;
+}
+.btn-clear:hover {
+  background-color: var(--pickled-bean);
+  color: var(--text-light);
+}
+
+/* Cart Item */
+.cart-item {
+  background-color: var(--walnut);
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  transition: transform 0.2s ease;
+}
+.cart-item:hover {
+  transform: scale(1.01);
+}
+.cart-item-img {
+  width: 70px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* Quantity Controls */
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qty-btn {
+  background-color: var(--pickled-bean);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.qty-btn:hover {
+  background-color: var(--light-brown);
+}
+
+/* Buttons */
+.btn-change {
+  background: transparent;
+  color: var(--light-brown);
+  border: none;
+  margin: 0 5px;
+}
+.remove-btn {
+  background: transparent;
+  color: #d46a6a;
+  border: none;
+  font-size: 1.1rem;
+}
+
+/* Summary Box */
+.summary-box {
+  background-color: var(--walnut);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+/* Checkout Button */
+.btn-checkout {
+  background-color: var(--pickled-bean);
+  border: none;
+  color: white;
+  border-radius: 50px;
+  transition: background 0.3s;
+}
+.btn-checkout:hover {
+  background-color: var(--light-brown);
+}
+
+/* Empty State */
+.empty-cart .btn-back {
+  background-color: var(--pickled-bean);
+  color: white;
+  border-radius: 30px;
+  transition: 0.3s;
+}
+.empty-cart .btn-back:hover {
+  background-color: var(--light-brown);
+  color: var(--dark-bg);
+}
+
+.price small {
+  font-size: 0.95rem;
+}
+
+.text-secondary {
+  color: #ce9465 !important
+}
+
+.text-muted {
+  color: #bfb2a0 !important; /* a warm muted tone matching Pickled Bean */
+}
+
+.text-decoration-line-through {
+  opacity: 0.7;
+}
+
+.text-light-brown {
+  color: var(--light-brown);
+}
+
+.btn-dark, #checkout-btn {
+  background-color: #d39e55 ;
+  border: none;
+  font-size: large;
+  font-weight: bold;
+}
+
+.btn-dark:hover, #checkout-btn:hover {
+  background-color: #ffcc85 ;
+}
+
