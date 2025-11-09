@@ -21,6 +21,6 @@ export class BookService {
   }
 
   getBookById(id: string): Observable<Book> {
-    return this.http.get<Book>(`${this.apiUrl}/${id}`);
+    return this.http.get<Book>(`${this.apiUrl}/Get-Book/${id}`);
   }
 }

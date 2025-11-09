@@ -6,6 +6,7 @@
   <div class="books-grid" *ngIf="!isLoading && books.length">
     <app-book-card
       *ngFor="let book of books"
+      [id]="book._id"
       [title]="book.name"
       [author]="book.author"
       [image]="book.image ? book.image.url : 'default-book.jpg'"
