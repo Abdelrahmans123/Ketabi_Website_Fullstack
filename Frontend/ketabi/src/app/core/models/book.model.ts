@@ -19,5 +19,9 @@ export interface BookResponse {
     pagination: any;
   };
 }
-
-
+export interface SingleBookResponse {
+  status: string;
+  message: string;
+  code: number;
+  data: Book;
+}

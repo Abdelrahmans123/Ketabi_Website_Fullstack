@@ -54,17 +54,17 @@
   background-color: #b8941c;
   transform: translateY(-2px);
 }
- .btn-more {
-        border: 1px solid #daa520;
-        color: #daa520;
-        background: transparent;
-        padding: 0.45rem 0.9rem;
-        border-radius: 0.25rem;
-        cursor: pointer;
-        transition: background 0.15s ease, color 0.15s ease;
-      }
-      .btn-more:hover {
-        background: #daa520;
-        color: #fff;
-        text-decoration: none;
-      }
+.btn-more {
+  border: 1px solid #daa520;
+  color: #daa520;
+  background: transparent;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-more:hover {
+  background: #daa520;
+  color: #fff;
+  text-decoration: none;
+}
