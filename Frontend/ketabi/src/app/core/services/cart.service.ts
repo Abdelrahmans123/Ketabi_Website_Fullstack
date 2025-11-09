@@ -93,6 +93,11 @@ export class CartService {
     return cart;
   }
 
+  getCartItems(){
+    const items = this.cartSubject.value.items;
+    return items;
+  }
+
 }
 
 

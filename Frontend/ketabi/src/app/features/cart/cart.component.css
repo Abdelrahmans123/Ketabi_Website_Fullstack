@@ -147,3 +147,19 @@
 .text-decoration-line-through {
   opacity: 0.7;
 }
+
+.text-light-brown {
+  color: var(--light-brown);
+}
+
+.btn-dark, #checkout-btn {
+  background-color: #d39e55 ;
+  border: none;
+  font-size: large;
+  font-weight: bold;
+}
+
+.btn-dark:hover, #checkout-btn:hover {
+  background-color: #ffcc85 ;
+}
+
