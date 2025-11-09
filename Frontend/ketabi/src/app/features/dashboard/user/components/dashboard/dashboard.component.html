@@ -1,16 +1,14 @@
 <app-hero></app-hero>
 
-<!-- Add the chatbot widget here -->
+<!-- Chatbot widget removed because the component is not declared; re-add after declaring/importing the component or adding CUSTOM_ELEMENTS_SCHEMA -->
 <app-chatbot-widget></app-chatbot-widget>
-
 <!-- Categories Section -->
 <section class="categories-section">
   <div class="container">
     <div class="row g-4">
       <div class="col-lg-3 col-md-6" *ngFor="let cat of categories">
-        <a [routerLink]="['/books', cat.category]" style="text-decoration:none; cursor: pointer;">
-          <app-category-card [icon]="cat.icon" [title]="cat.title">
-          </app-category-card>
+        <a [routerLink]="['/books', cat.category]" style="text-decoration: none; cursor: pointer">
+          <app-category-card [icon]="cat.icon" [title]="cat.title"> </app-category-card>
         </a>
       </div>
     </div>
@@ -20,7 +18,6 @@
 <!-- Featured Books Section -->
 <section class="featured-section py-5">
   <div class="container">
-
     <h2 class="section-title text-center mb-5">{{ currentCategoryTitle }}</h2>
 
     <!-- Loading State -->
@@ -38,18 +35,18 @@
 
     <!-- Books Grid -->
     <div class="row g-4 mb-5" *ngIf="!loading && !error">
-      <div class="col-lg-3 col-md-6" *ngFor="let book of books; let i = index" [hidden]=" i >= 8">
-        <app-book-card [image]="book.image.url" [title]="book.name" [author]="book.author">
+      <div class="col-lg-3 col-md-6" *ngFor="let book of books; let i = index" [hidden]="i >= 8">
+        <app-book-card
+          [image]="book?.image?.url || 'default-book.jpg'"
+          [title]="book.name"
+          [author]="book.author"
+        >
         </app-book-card>
       </div>
     </div>
 
-
-
     <div class="text-center mb-4" *ngIf="!loading && !error && books.length > 7">
-      <button class="btn-more" (click)="ShowAll()">
-        Show More
-      </button>
+      <button class="btn-more" (click)="ShowAll()">Show More</button>
     </div>
 
     <!-- No Books Message -->
@@ -64,7 +61,7 @@
           <h3 class="text-center mb-4">Sign Up for Our Newsletter</h3>
           <form>
             <div class="mb-3">
-              <input type="email" class="form-control newsletter-input" placeholder="E-mail">
+              <input type="email" class="form-control newsletter-input" placeholder="E-mail" />
             </div>
             <button type="submit" class="btn btn-newsletter w-100">Follow Us</button>
           </form>
