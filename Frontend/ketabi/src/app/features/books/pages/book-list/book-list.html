@@ -8,7 +8,7 @@
     *ngFor="let book of books"
     [title]="book.name"
     [author]="book.author"
-  [image]="book.image?.url || 'assets/default-book.jpg'">  </app-book-card>
+  [image]="book.image.url || 'assets/default-book.jpg'" [book]="book">  </app-book-card>
 </div>
 
 

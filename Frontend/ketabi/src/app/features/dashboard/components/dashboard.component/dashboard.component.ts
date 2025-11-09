@@ -80,7 +80,7 @@ categories = [
     this.bookService.getBooksByCategory(category).subscribe({
       next: (response) => {
         if (response.status === 'success') {
-          this.books = response.data.books;
+         this.books = response.data.books || response.data;
         } else {
           this.error = response.message;
         }
