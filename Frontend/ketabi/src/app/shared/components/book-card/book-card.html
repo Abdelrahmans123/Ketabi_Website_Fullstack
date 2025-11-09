@@ -1,13 +1,19 @@
 <div class="card book-card h-100">
-  <img [src]="image || 'assets/default-book.jpg'" class="card-img-top" [alt]="title">
+  <img [src]="image || 'assets/default-book.jpg'" class="card-img-top" [alt]="title" />
 
   <div class="card-overlay">
     <div class="overlay-controls">
       <a href="#" class="overlay-link btn-cart" title="Add to cart" aria-label="Add to cart">
         <i class="fa fa-shopping-cart" aria-hidden="true"></i>
       </a>
-      <a href="#" class="overlay-link btn-details" title="View details" aria-label="View details">
-         <i class="fa fa-eye" aria-hidden="true"></i>
+
+      <a
+        [routerLink]="['/book', id]"
+        class="overlay-link btn-details"
+        title="View details"
+        aria-label="View details"
+      >
+        <i class="fa fa-eye" aria-hidden="true"></i>
       </a>
     </div>
   </div>
