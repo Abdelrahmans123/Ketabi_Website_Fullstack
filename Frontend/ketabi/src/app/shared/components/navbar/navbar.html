@@ -1,66 +1,129 @@
 <nav class="navbar navbar-expand-lg navbar-custom">
   <div class="container-fluid px-5">
     <!-- Logo -->
-    <a class="navbar-brand" href="/">
-      <img src="logo.png" alt="Ketabi Logo" class="navbar-logo">
+    <a class="navbar-brand" routerLink="/">
+      <img src="images/logo.png" alt="Ketabi Logo" class="navbar-logo" />
     </a>
 
     <!-- Toggle Button for Mobile -->
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+    >
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <!-- Navigation Links -->
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav m-auto align-items-center">
-
         <!-- Home Link -->
         <li class="nav-item">
-          <a class="nav-link" routerLink="/">Home</a>
+          <a
+            class="nav-link"
+            routerLink="/"
+            routerLinkActive="active"
+
+            >Home</a
+          >
         </li>
 
         <!-- Shop Link -->
         <li class="nav-item">
-          <a class="nav-link" routerLink="/books">Shop</a>
+          <a class="nav-link" routerLink="/books" routerLinkActive="active">Shop</a>
         </li>
 
         <!-- About Link -->
         <li class="nav-item">
-          <a class="nav-link" href="/about">About</a>
+          <a class="nav-link" routerLink="/about" routerLinkActive="active">About</a>
         </li>
 
         <!-- Contact Button -->
         <li class="nav-item">
-          <button class="btn btn-contact">Contact</button>
+          <button class="btn btn-contact" routerLink="/contact">Contact</button>
         </li>
-
       </ul>
 
       <!-- Icons on the Right -->
       <ul class="navbar-nav align-items-center">
-
         <!-- Cart Icon -->
         <li class="nav-item">
-          <a routerLink="/cart" routerLinkActive="active" class="icon-link cart-icon" title="Shopping Cart">
+          <a routerLink="/cart" class="icon-link cart-icon" title="Shopping Cart">
             <i class="fas fa-shopping-cart"></i>
             <span class="cart-count" *ngIf="(cartCount$ | async) as count">{{ count }}</span>
           </a>
         </li>
 
+        @if(!isLoggedIn) {
         <!-- Login Link -->
         <li class="nav-item">
-          <a href="/login" class="nav-link auth-link" title="Login">
-            Login
-          </a>
+          <a routerLink="/auth/login" class="nav-link auth-link" title="Login">Login</a>
         </li>
 
         <!-- Register Link -->
         <li class="nav-item">
-          <a href="/register" class="nav-link auth-link" title="Register">
-            Register
-          </a>
+          <a routerLink="/auth/register" class="nav-link auth-link" title="Register">Register</a>
         </li>
+        } @else {
+        <!-- User Profile Icon with Dropdown -->
+        <li class="nav-item dropdown">
+          <a
+            class="icon-link profile-icon dropdown-toggle"
+            href="#"
+            id="profileDropdown"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            title="User Profile"
+          >
+            @if(currentUser?.avatar?.url) {
+            <img [src]="currentUser.avatar.url" alt="Profile" class="profile-avatar" />
+            } @else {
+            <i class="fas fa-user"></i>
+            }
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+            <!-- User Info Header -->
+            @if(currentUser) {
+            <li class="dropdown-header">
+              <div class="user-info">
+                <strong>{{ currentUser.name }}</strong>
+                <small class="text-muted d-block">{{ currentUser.email }}</small>
+              </div>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            }
 
+            <li>
+              <a class="dropdown-item" routerLink="/profile">
+                <i class="fas fa-user me-2"></i>My Profile
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" routerLink="/orders">
+                <i class="fas fa-box me-2"></i>My Orders
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" routerLink="/wishlist">
+                <i class="fas fa-heart me-2"></i>Wishlist
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" routerLink="/settings">
+                <i class="fas fa-cog me-2"></i>Settings
+              </a>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+              <button class="dropdown-item" (click)="logout()">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+              </button>
+            </li>
+          </ul>
+        </li>
+        }
       </ul>
     </div>
   </div>

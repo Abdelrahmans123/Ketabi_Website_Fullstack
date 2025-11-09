@@ -24,8 +24,7 @@ import { roleEnum } from "../utils/roleEnum.js";
 import mongoose from "mongoose"; // added for ObjectId validation
 
 export const AddBook = asyncHandler(async (req, res, next) => {
-    const publisherId = req.user.id;
-    req.body.publisher = publisherId;
+    req.body.publisher = req.user.id;
 
     if (!req.body.genre_id) {
         return next(new AppError("genre_id is required", 400));
@@ -307,8 +306,6 @@ export const downloadBook = asyncHandler(async (req, res, next) => {
     if (!book || !book.pdf?.key) {
         return next(new AppError("Book or file not found", 404));
     }
-
-    // Generate temporary signed URL for download (expires in 60 seconds)
     const signedUrl = await generateSignedDownloadUrl(book.pdf.key, 60);
 
     return res.redirect(signedUrl);
@@ -343,9 +340,8 @@ export const getBooksByCategory = asyncHandler(async (req, res, next) => {
     const books = await Book.find(filter)
         .sort({ createdAt: -1 })
         .limit(8)
-        .select("name author image.url")
+        .select("name author image.url genre price rating")
         .lean();
-
     if (!books || books.length === 0) {
         return next(
             new AppError(`No books found in category: ${category}`, 404)
