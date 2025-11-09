@@ -1,20 +1,67 @@
 import { Routes } from '@angular/router';
-import { DashboardComponent } from './features/dashboard/components/dashboard.component/dashboard.component';
 import { BookListComponent } from './features/books/pages/book-list/book-list';
-
-import { PublisherBooksComponent } from './features/publishers/pages/publisher-books/publisher-books.component';
-import { PublisherOrdersComponent } from './features/publishers/pages/publisher-orders/publisher-orders.component';
-import { PublisherDashboardComponent } from './features/publishers/pages/publisher-dashboard/publisher-dashboard.component';
+import { AuthGuard } from './core/guards/auth.guard';
+import { RoleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
-  { path: 'books', component: BookListComponent },
-  { path: 'books/:category', component: DashboardComponent },
-
-
-  
-  { path: 'publisher/books', component: PublisherBooksComponent },
-  { path: 'publisher/orders', component: PublisherOrdersComponent },
-  { path: 'publisher/dashboard', component: PublisherDashboardComponent },
-  { path: '', redirectTo: '/books/Arabic', pathMatch: 'full' },
-  // { path: '**', redirectTo: '/books/Arabic' },
+  { path: '', redirectTo: 'books', pathMatch: 'full' },
+  {
+    path: 'books',
+    component: BookListComponent,
+  },
+  {
+    path: 'books/:category',
+    component: BookListComponent,
+  },
+  {
+    path: 'auth',
+    loadChildren: () => import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
+    title: 'Authentication',
+  },
+  {
+    path: 'dashboard',
+    loadChildren: () =>
+      import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
+    title: 'Dashboard',
+  },
+  {
+    path: 'publisher',
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['publisher'] },
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/publisher/components/dashboard/dashboard.component').then(
+            (m) => m.PublisherDashboardComponent
+          ),
+        title: 'Publisher Dashboard',
+      },
+      {
+        path: 'books',
+        loadComponent: () =>
+          import('./features/publishers/pages/publisher-books/publisher-books.component').then(
+            (m) => m.PublisherBooksComponent
+          ),
+        title: 'Publisher Books',
+      },
+      {
+        path: 'orders',
+        loadComponent: () =>
+          import('./features/publishers/pages/publisher-orders/publisher-orders.component').then(
+            (m) => m.PublisherOrdersComponent
+          ),
+        title: 'Publisher Orders',
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full',
+      },
+    ],
+  },
+  {
+    path: '**',
+    redirectTo: 'auth/login',
+  },
 ];

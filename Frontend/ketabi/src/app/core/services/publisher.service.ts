@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { PublisherBooksResponse, UpdateBookRequest } from '../../features/publishers/models/book.model';
+import { PublisherBook, PublisherBooksResponse, UpdateBookRequest } from '../../features/publishers/models/book.model';
 import { PublisherOrdersResponse, UpdatePublisherOrderRequest, UpdatePublisherOrderResponse } from '../../features/publishers/models/order.model';
+import { Genre } from '../../features/publishers/models/genre.model';
+import { AuthService } from './auth.service';
 
 @Injectable({
     providedIn: 'root'
@@ -11,49 +14,76 @@ import { PublisherOrdersResponse, UpdatePublisherOrderRequest, UpdatePublisherOr
 export class PublisherService {
     private publishersUrl = API_ENDPOINTS.publishers;
     private booksUrl = API_ENDPOINTS.books;
-    constructor(private http: HttpClient) { }
+    private genresUrl = API_ENDPOINTS.genres;
 
+    constructor(private http: HttpClient, private authService: AuthService) { }
 
+    private getAuthHeaders(isJson: boolean = true): HttpHeaders {
+        const token = this.authService.getAccessToken();
+        let headers = new HttpHeaders();
 
+        if (token) {
+            headers = headers.set('Authorization', `Bearer ${token}`);
+            if (isJson) {
+                headers = headers.set('Content-Type', 'application/json');
+            }
+        }
 
-    // Get published books
+        return headers;
+    }
+
     getPublishedBooks(publisherId: string, page: number = 1, limit: number = 10): Observable<PublisherBooksResponse> {
-
-        const params: any = { page, limit };
+        const params = {
+            page: Math.max(1, page || 1),
+            limit: Math.max(5, limit || 10),
+        };
         return this.http.get<PublisherBooksResponse>(`${this.publishersUrl}/${publisherId}/books`, { params });
     }
 
-    // Add book (uses FormData for file upload)
+    getPublisherBook(bookId: string): Observable<PublisherBook> {
+        const headers = this.getAuthHeaders();
+        return this.http.get<any>(`${this.booksUrl}/Get-Book/${bookId}`, { headers }).pipe(
+            map((response) => response?.data?.book ?? response?.data ?? response)
+        );
+    }
+
+    getGenres(): Observable<Genre[]> {
+        return this.http.get<any>(this.genresUrl).pipe(
+            map((response) => Array.isArray(response) ? response : response?.data ?? [])
+        );
+    }
+
     addBook(formData: FormData): Observable<any> {
-        return this.http.post(`${this.booksUrl}/Create-Book`, formData, {});
+        const headers = this.getAuthHeaders(false);
+        return this.http.post(`${this.booksUrl}/Create-Book`, formData, { headers });
     }
 
-    // Update book
-    updateBook(bookId: string, data: UpdateBookRequest): Observable<any> {
-        return this.http.put(`${this.booksUrl}/Update-Book/${bookId}`, data, {
-        });
+    updateBook(bookId: string, data: UpdateBookRequest | FormData): Observable<any> {
+        if (data instanceof FormData) {
+            const headers = this.getAuthHeaders(false);
+            return this.http.put(`${this.booksUrl}/Update-Book/${bookId}`, data, { headers });
+        }
+        const headers = this.getAuthHeaders();
+        return this.http.put(`${this.booksUrl}/Update-Book/${bookId}`, data, { headers });
     }
 
-    // Delete book
     deleteBook(bookId: string): Observable<any> {
-        console.log('Deleting book:', bookId);
-        return this.http.delete(`${this.booksUrl}/Delete/${bookId}`, {
-        });
+        const headers = this.getAuthHeaders();
+        return this.http.delete(`${this.booksUrl}/Delete/${bookId}`, { headers });
     }
 
-    // Get publisher orders
     getPublisherOrders(publisherId: string, page: number = 1, limit: number = 10): Observable<PublisherOrdersResponse> {
-        console.log('Getting publisher orders:', publisherId, page, limit);
-        const params: any = { page, limit };
-        return this.http.get<PublisherOrdersResponse>(`${this.publishersUrl}/${publisherId}/orders`, {
-            params,
-        });
+        const params = {
+            page: Math.max(1, page || 1),
+            limit: Math.max(5, limit || 10),
+        };
+        const headers = this.getAuthHeaders();
+        return this.http.get<PublisherOrdersResponse>(`${this.publishersUrl}/${publisherId}/orders`, { params, headers });
     }
 
-    // Update publisher order
     updatePublisherOrder(publisherOrderId: string, data: UpdatePublisherOrderRequest): Observable<UpdatePublisherOrderResponse> {
-        console.log('Updating publisher order:', publisherOrderId, data);
-        return this.http.patch<UpdatePublisherOrderResponse>(`${this.publishersUrl}/${publisherOrderId}`, data);
+        const headers = this.getAuthHeaders();
+        return this.http.patch<UpdatePublisherOrderResponse>(`${this.publishersUrl}/${publisherOrderId}`, data, { headers });
     }
 }
 

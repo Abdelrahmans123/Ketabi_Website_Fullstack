@@ -50,7 +50,8 @@ export interface UpdateBookRequest {
     Edition?: string;
     recommendedAge?: 'kids' | 'adults' | 'all';
     bookLanguage?: 'english' | 'arabic';
-    categoryName?: string;
+    genre_id?: string;
+    genre?: string;
     price?: number;
     discount?: number;
     cost?: number;

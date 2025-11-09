@@ -2,22 +2,24 @@
     <div class="card">
         <div class="header-section">
             <h2 class="page-title">My Published Books</h2>
-            <button class="add-book-btn" (click)="addNewBook()">
+            <button class="add-book-btn" (click)="addNewBook()" [disabled]="loading || submitting">
                 <span>+ Add New Book</span>
             </button>
         </div>
 
-        <!-- Loading State -->
+        <div *ngIf="feedbackMessage" class="alert" [ngClass]="{'alert-success': feedbackMessage.type === 'success', 'alert-error': feedbackMessage.type === 'error'}">
+            <span>{{ feedbackMessage.text }}</span>
+            <button class="alert-close" type="button" (click)="dismissFeedback()">&times;</button>
+        </div>
+
         <div *ngIf="loading" class="loading-message">
             <p>Loading books...</p>
         </div>
 
-        <!-- Error State -->
         <div *ngIf="error && !loading" class="alert alert-error">
             {{ error }}
         </div>
 
-        <!-- Books Table -->
         <div *ngIf="!loading && !error && books.length > 0" class="books-section">
             <div class="books-summary">
                 <p>Total Books: <strong>{{ totalBooks }}</strong></p>
@@ -49,21 +51,34 @@
                                 </span>
                             </td>
                             <td class="actions">
-                                <button class="btn-edit" (click)="editBook(book._id)" title="Edit">
-                                    Edit
-                                </button>
-                                <button class="btn-delete" (click)="deleteBook(book._id, book.name)"
-                                    [disabled]="deletingBookId === book._id" title="Delete">
-                                    <span *ngIf="deletingBookId !== book._id">Delete</span>
-                                    <span *ngIf="deletingBookId === book._id">Deleting...</span>
-                                </button>
+                                <ng-container *ngIf="deleteConfirmId !== book._id; else deletePrompt">
+                                    <button class="btn-edit" (click)="editBook(book._id)"
+                                        [disabled]="submitting || deletingBookId === book._id || loadingBookId === book._id">
+                                        <span *ngIf="loadingBookId === book._id">Loading...</span>
+                                        <span *ngIf="loadingBookId !== book._id">Edit</span>
+                                    </button>
+                                    <button class="btn-delete" (click)="promptDelete(book._id)"
+                                        [disabled]="submitting || deletingBookId === book._id">
+                                        Delete
+                                    </button>
+                                </ng-container>
+                                <ng-template #deletePrompt>
+                                    <div class="delete-confirm-banner">
+                                        <span>Confirm deletion?</span>
+                                        <button class="btn-confirm" (click)="confirmDelete(book._id)" [disabled]="deletingBookId === book._id">
+                                            {{ deletingBookId === book._id ? 'Deleting...' : 'Yes' }}
+                                        </button>
+                                        <button class="btn-cancel" type="button" (click)="cancelDelete()" [disabled]="deletingBookId === book._id">
+                                            No
+                                        </button>
+                                    </div>
+                                </ng-template>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Pagination -->
             <div *ngIf="totalPages > 1" class="pagination">
                 <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
                     Previous
@@ -77,12 +92,38 @@
             </div>
         </div>
 
-        <!-- No Books -->
         <div *ngIf="!loading && !error && books.length === 0" class="no-books">
             <p>No books published yet.</p>
-            <button class="add-book-btn" (click)="addNewBook()">
+            <button class="add-book-btn" (click)="addNewBook()" [disabled]="submitting">
                 Add Your First Book
             </button>
+        </div>
+    </div>
+
+    <div *ngIf="showForm" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>{{ formMode === 'create' ? 'Add New Book' : 'Edit Book' }}</h3>
+                <button class="close-btn" type="button" (click)="handleFormCancel()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ng-container *ngIf="!genresLoading; else loadingGenres">
+                    <app-publisher-book-form
+                        [mode]="formMode"
+                        [initialBook]="selectedBook"
+                        [genres]="genres"
+                        [submitting]="submitting"
+                        (submitForm)="handleFormSubmit($event)"
+                        (cancel)="handleFormCancel()"
+                        (formStatusChange)="handleFormStatusChange($event)">
+                    </app-publisher-book-form>
+                </ng-container>
+                <ng-template #loadingGenres>
+                    <div class="loading-message">
+                        <p>Loading genres...</p>
+                    </div>
+                </ng-template>
+            </div>
         </div>
     </div>
 </div>

@@ -1,7 +1,8 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { PublisherService } from '../../../../core/services/publisher.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { PublisherOrder, PublisherOrdersResponse, UpdatePublisherOrderRequest, DeliveryStatus, PaymentStatus } from '../../models/order.model';
 
 @Component({
@@ -34,7 +35,8 @@ export class PublisherOrdersComponent implements OnInit {
 
     constructor(
         private publisherService: PublisherService,
-        private fb: FormBuilder
+        private fb: FormBuilder,
+        private authService: AuthService,
     ) {
         this.updateForm = this.fb.group({
             deliveryStatus: [''],
@@ -52,7 +54,7 @@ export class PublisherOrdersComponent implements OnInit {
     }
 
     private getCurrentUserId(): string | null {
-        return null; // Should be retrieved from auth service
+        return this.authService.getCurrentUser()?.id || null;
     }
 
     loadOrders(publisherId: string, page: number = 1): void {
