@@ -4,11 +4,14 @@
   <div *ngIf="isLoading">Loading books...</div>
   <div *ngIf="errorMessage">{{ errorMessage }}</div>
 <div class="books-grid" *ngIf="!isLoading && books.length">
-  <app-book-card
-    *ngFor="let book of books"
-    [title]="book.name"
-    [author]="book.author"
-  [image]="book.image?.url || 'assets/default-book.jpg'">  </app-book-card>
+ <app-book-card
+  *ngFor="let book of books"
+  [id]="book._id"
+  [title]="book.name"
+  [author]="book.author"
+[image]="book.image?.url || 'assets/default-book.jpg'">
+</app-book-card>
+
 </div>
 
 

@@ -37,7 +37,7 @@ const bootstrap = async () => {
     const PORT = process.env.PORT || 3000;
     // *---MongoDB & Redis Connection---*
     await connectMongoDB();
-    await connectRedisDB();
+    //await connectRedisDB();
     app.use("/api/webhooks", stripeRouter);
     // *---Middlewares---*
     app.use(express.json());
