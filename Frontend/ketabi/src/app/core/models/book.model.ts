@@ -1,4 +1,5 @@
 export interface Book {
+  data: Book | undefined;
   _id: string;
   name: string;
   author: string;
@@ -9,6 +10,7 @@ export interface Book {
   description: string;
   stock: number;
   status: string;
+  genre?: { name: string };
 }
 export interface BookResponse {
   status: string;
