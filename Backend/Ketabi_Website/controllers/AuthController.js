@@ -87,7 +87,10 @@ export const registerWithGoogle = asyncHandler(async (req, res, next) => {
     if (!payload.email_verified) {
         return next(new AppError("Email not verified by Google", 400));
     }
-    const existingUser = await findOne(User, { email: verifiedEmail });
+    const existingUser = await findOne({
+        model: User,
+        query: { email: verifiedEmail },
+    });
 
     if (existingUser) {
         return next(new AppError("User already exists, please login", 409));
@@ -106,6 +109,10 @@ export const registerWithGoogle = asyncHandler(async (req, res, next) => {
             public_id: `google_${nanoid()}`,
             url: photoUrl || payload.picture,
         },
+        role: "user",
+        gender: payload.gender || "male",
+        confirmEmailOtp: 1,
+        confirmEmailOtpExpires: null,
         isTwoFactorAuthenticated: true,
     };
     const user = await create({ model: User, data });
