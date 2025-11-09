@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { BookListComponent } from './features/books/pages/book-list/book-list';
 import { AuthGuard } from './core/guards/auth.guard';
+import { CartComponent } from './features/cart/cart.component';
 
 export const routes: Routes = [
   {
@@ -25,6 +26,7 @@ export const routes: Routes = [
     redirectTo: 'dashboard',
     pathMatch: 'full',
   },
+  { path: 'cart', component: CartComponent },
   {
     path: '**',
     redirectTo: 'auth/login', // Changed to login instead of dashboard

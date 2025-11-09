@@ -3,15 +3,17 @@
 
   <div *ngIf="isLoading">Loading books...</div>
   <div *ngIf="errorMessage">{{ errorMessage }}</div>
-  <div class="books-grid" *ngIf="!isLoading && books.length">
-    <app-book-card
-      *ngFor="let book of books"
-      [id]="book._id"
-      [title]="book.name"
-      [author]="book.author"
-      [image]="book.image ? book.image.url : 'default-book.jpg'"
-    >
-    </app-book-card>
+<div class="books-grid" *ngIf="!isLoading && books.length">
+  <app-book-card
+    *ngFor="let book of books"
+    [title]="book.name"
+    [author]="book.author"
+  [image]="book.image.url || 'assets/default-book.jpg'" [book]="book">  </app-book-card>
+</div>
+
+
+  <div *ngIf="!isLoading && !books.length">
+    No books found.
   </div>
 
   <div *ngIf="!isLoading && !books.length">No books found.</div>

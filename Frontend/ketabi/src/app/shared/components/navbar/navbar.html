@@ -51,7 +51,7 @@
         <li class="nav-item">
           <a routerLink="/cart" class="icon-link cart-icon" title="Shopping Cart">
             <i class="fas fa-shopping-cart"></i>
-            <span class="cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
+            <span class="cart-count" *ngIf="(cartCount$ | async) as count">{{ count }}</span>
           </a>
         </li>
 

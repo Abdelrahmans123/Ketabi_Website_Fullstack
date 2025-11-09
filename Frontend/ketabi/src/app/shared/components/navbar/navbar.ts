@@ -1,27 +1,35 @@
-// navbar.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { map, Observable } from 'rxjs';
+import { CartService } from '../../../core/services/cart.service';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import {  OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink,RouterLinkActive],
   templateUrl: './navbar.html',
   styleUrls: ['./navbar.css'],
 })
 export class Navbar implements OnInit, OnDestroy {
   isLoggedIn = false;
-  cartCount = 0;
   currentUser: any = null;
+  cartCount$!: Observable<number>;
 
   private authSubscription?: Subscription;
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router, private cartService:CartService) {}
 
   ngOnInit() {
+    this.cartCount$ = this.cartService.cart$.pipe(
+      map(cart => cart.items.reduce((sum,item) => sum + item.quantity, 0))
+    )
+
     // Initialize authentication state
     this.checkAuthStatus();
 
