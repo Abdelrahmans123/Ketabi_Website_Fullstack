@@ -1,0 +1,88 @@
+<div class="publisher-books-container">
+    <div class="card">
+        <div class="header-section">
+            <h2 class="page-title">My Published Books</h2>
+            <button class="add-book-btn" (click)="addNewBook()">
+                <span>+ Add New Book</span>
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-message">
+            <p>Loading books...</p>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="error && !loading" class="alert alert-error">
+            {{ error }}
+        </div>
+
+        <!-- Books Table -->
+        <div *ngIf="!loading && !error && books.length > 0" class="books-section">
+            <div class="books-summary">
+                <p>Total Books: <strong>{{ totalBooks }}</strong></p>
+            </div>
+
+            <div class="table-container">
+                <table class="books-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Genre</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let book of books">
+                            <td class="book-title">{{ book.name }}</td>
+                            <td>{{ book.author }}</td>
+                            <td>{{ getGenreName(book.genre) }}</td>
+                            <td class="price">${{ book.price }}</td>
+                            <td>{{ book.stock || 0 }}</td>
+                            <td>
+                                <span class="status-badge" [class]="'status-' + book.status.replace(' ', '-')">
+                                    {{ book.status }}
+                                </span>
+                            </td>
+                            <td class="actions">
+                                <button class="btn-edit" (click)="editBook(book._id)" title="Edit">
+                                    Edit
+                                </button>
+                                <button class="btn-delete" (click)="deleteBook(book._id, book.name)"
+                                    [disabled]="deletingBookId === book._id" title="Delete">
+                                    <span *ngIf="deletingBookId !== book._id">Delete</span>
+                                    <span *ngIf="deletingBookId === book._id">Deleting...</span>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div *ngIf="totalPages > 1" class="pagination">
+                <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+                    Previous
+                </button>
+                <span class="page-info">
+                    Page {{ currentPage }} of {{ totalPages }}
+                </span>
+                <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+                    Next
+                </button>
+            </div>
+        </div>
+
+        <!-- No Books -->
+        <div *ngIf="!loading && !error && books.length === 0" class="no-books">
+            <p>No books published yet.</p>
+            <button class="add-book-btn" (click)="addNewBook()">
+                Add Your First Book
+            </button>
+        </div>
+    </div>
+</div>
