@@ -14,7 +14,7 @@ export class CouponService {
   constructor(private http: HttpClient) { }
 
   verifyCoupon(code: string, subtotal: number): Observable<couponResponse> {
-    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MGU3MDdmMjcwYjA4MzQyNzliMDc3MSIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBYmRlbHJhaG1hbiBTYWxhaCIsImlhdCI6MTc2MjY3MDU4MCwiZXhwIjoxNzYyNzU2OTgwLCJqdGkiOiJkMWRFWjBoaXJNTU9TeGdaRGJmSXYifQ.451RA8T_qmg2gUMwjhn_0OZuTZsW2bIpRSp7a31mKQY";
+    const token = "";
     const headers = new HttpHeaders({
       Authorization: `Bearer ${token}`
     });
