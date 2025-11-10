@@ -14,25 +14,13 @@ export class RoleGuard implements CanActivate {
     const userRole = this.authService.getUserRole();
 
     if (!userRole) {
-      this.router.navigate(['/login']);
-      return false;
-    }
-
-    if (!userRole) {
-      console.error('No user role found');
       this.router.navigate(['/auth/login']);
       return false;
     }
-    const allowedRoles = route.data['roles'] as Array<string>;
-
-    if (allowedRoles && allowedRoles.length > 0) {
-      if (!allowedRoles.includes(userRole)) {
-        console.warn(`Access denied. User role '${userRole}' not in allowed roles:`, allowedRoles);
-
-        // Redirect to user's own dashboard
-        this.authService.redirectToDashboard();
-        return false;
-      }
+    if (expectedRoles?.length && !expectedRoles.includes(userRole)) {
+      console.warn(`Access denied. User role '${userRole}' not in allowed roles:`, expectedRoles);
+      this.authService.redirectToDashboard();
+      return false;
     }
     return true;
   }

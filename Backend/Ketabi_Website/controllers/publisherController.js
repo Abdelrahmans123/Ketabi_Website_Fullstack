@@ -17,7 +17,9 @@ export const createPublisher = asyncHandler(async (req, res, next) => {
 
     if (!userDoc) return next(new AppError("Id not found", 400));
     userDoc.role = roleEnum.publisher;
-    await userDoc.save();
+    // await userDoc.save();
+    await userDoc.save({ validateBeforeSave: false });
+
     return successResponse({
         res,
         statusCode: 201,
@@ -30,6 +32,11 @@ export const getPublishedBooks = asyncHandler(async (req, res, next) => {
     const { publisherId } = req.params;
     let { page, limit } = req.query;
 
+    page = Number(page) || 1;
+    limit = Number(limit) || 10;
+    page = Math.max(page, 1);
+    limit = Math.max(limit, 1);
+
     const publisher = await findById({
         model: User,
         id: publisherId,
@@ -37,11 +44,16 @@ export const getPublishedBooks = asyncHandler(async (req, res, next) => {
 
     if (!publisher) throw new AppError("Publisher not found", 404);
 
-    if (page > publisher.booksPublished.length / limit) {
-        page = Math.ceil(publisher.booksPublished.length / limit) || 0;
+    const totalBooks = publisher.booksPublished.length;
+    const totalPages = totalBooks === 0 ? 0 : Math.ceil(totalBooks / limit);
+
+    if (totalPages > 0) {
+        page = Math.min(page, totalPages);
+    } else {
+        page = 1;
     }
 
-    const skip = (page - 1) * limit;
+    const skip = Math.max(0, (page - 1) * limit);
 
     const publishedBooks = await findAll({
         model: Book,
@@ -49,9 +61,6 @@ export const getPublishedBooks = asyncHandler(async (req, res, next) => {
         skip,
         limit
     });
-
-    const totalPages = Math.ceil(publisher.booksPublished.length / limit) || 0;
-    const totalBooks = publisher.booksPublished.length || 0;
 
     return successResponse({
         res,
@@ -73,18 +82,25 @@ export const getPublisherOrders = asyncHandler(async (req, res, next) => {
     let { page, limit } = req.query;
     const user = req.user;
 
+    page = Number(page) || 1;
+    limit = Number(limit) || 10;
+    page = Math.max(page, 1);
+    limit = Math.max(limit, 1);
+
     if (user.role === roleEnum.publisher && user.id !== publisherId) {
         return next(new AppError("You can only view your own orders", 403));
     }
 
     const total = await PublisherOrder.countDocuments({ publisher: publisherId });
-    const totalPages = Math.ceil(total / limit) || 0;
+    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
 
-    if (totalPages < page) {
-        page = totalPages;
+    if (totalPages > 0) {
+        page = Math.min(page, totalPages);
+    } else {
+        page = 1;
     }
 
-    const skip = (page - 1) * limit;
+    const skip = Math.max(0, (page - 1) * limit);
 
     const publisherOrders = await findAll({
         model: PublisherOrder,
@@ -133,7 +149,7 @@ export const updatePublisherOrder = asyncHandler(async (req, res, next) => {
         }
 
         let hasUpdated = false;
-        
+
         publisherOrder.items = publisherOrder.items.map((item) => {
             if (item.book.toString() === bookId && (deliveryStatus !== item.deliveryStatus || paymentStatus !== item.paymentStatus)) {
                 hasUpdated = true;

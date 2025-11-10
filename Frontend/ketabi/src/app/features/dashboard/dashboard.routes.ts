@@ -26,7 +26,7 @@ export const DASHBOARD_ROUTES: Routes = [
     path: 'publisher',
     loadComponent: () =>
       import('./publisher/components/dashboard/dashboard.component').then(
-        (m) => m.DashboardComponent
+        (m) => m.PublisherDashboardComponent
       ),
     title: 'Publisher Dashboard',
     canActivate: [AuthGuard, RoleGuard],
