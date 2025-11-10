@@ -137,4 +137,16 @@
   .btn-contact {
     margin: 0.3rem 0;
   }
+
+  .navbar-search-inline {
+    max-width: 280px;
+  }
+
 }
+
+/* Search Bar - Inline */
+.navbar-search-inline {
+  width: 100%;
+  max-width: 400px;
+}
+

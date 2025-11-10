@@ -1,4 +1,3 @@
-// src/app/shared/components/chatbot-widget/chatbot-widget.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -31,7 +30,7 @@ export class ChatbotWidgetComponent implements OnInit {
   constructor(private chatbotService: ChatbotService) {}
 
   ngOnInit(): void {
-    // [translate:رسالة ترحيب افتراضية]
+
     this.messages.push({
       id: '1',
       type: 'bot',
@@ -51,7 +50,7 @@ export class ChatbotWidgetComponent implements OnInit {
   sendMessage(): void {
     if (!this.userInput.trim()) return;
 
-    // [translate:أضف رسالة المستخدم]
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
@@ -60,13 +59,12 @@ export class ChatbotWidgetComponent implements OnInit {
     };
     this.messages.push(userMessage);
 
-    // [translate:امسح حقل الإدخال]
+
     const query = this.userInput;
     this.userInput = '';
     this.isLoading = true;
     this.hasError = false;
 
-    // [translate:أرسل الطلب للـ API]
     this.chatbotService.askChatbot({ query }).subscribe({
       next: (response: ChatbotResponse) => {
         this.isLoading = false;

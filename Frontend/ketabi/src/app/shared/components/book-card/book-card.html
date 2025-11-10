@@ -1,25 +1,51 @@
-<div class="card book-card h-100">
-  <img [src]="image || 'default-book.jpg'" class="card-img-top" [alt]="title" />
+<div class="book-card-wrapper">
+  <div class="book-card h-100">
+    <!-- Book Image -->
+    <img
+      [src]="image || 'assets/images/book-placeholder.png'"
+      [alt]="title"
+      class="card-img-top"
+    />
 
-  <div class="card-overlay">
-    <div class="overlay-controls">
-      <a class="overlay-link btn-cart" title="Add to cart" aria-label="Add to cart" (click)="addToCart($event)">
-        <i class="fa fa-shopping-cart" aria-hidden="true"></i><span class="visually-hidden">Add to cart</span>
-      </a>
-      <a
-        href="#"
-        [routerLink]="['/books', id]"
-        class="overlay-link btn-details"
-        title="View details"
-        aria-label="View details"
-      >
-        <i class="fa fa-eye" aria-hidden="true"></i>
-      </a>
+    <!-- Overlay with Actions -->
+    <div class="card-overlay">
+      <div class="overlay-controls">
+        <!-- Add to Cart Button -->
+        <button
+          class="overlay-link btn-cart"
+          title="Add to cart"
+          aria-label="Add to cart"
+          (click)="addToCart($event)"
+        >
+          <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+        </button>
+
+        <!-- View Details Button -->
+        <button
+          class="overlay-link btn-details"
+          [routerLink]="['/books', id]"
+          title="View details"
+          aria-label="View details"
+        >
+          <i class="fa fa-eye" aria-hidden="true"></i>
+        </button>
+      </div>
     </div>
-  </div>
 
-  <div class="card-body">
-    <h6 class="card-title text-truncate">{{ title }}</h6>
-    <p class="card-text small text-muted text-truncate">{{ author }}</p>
+    <!-- Card Body -->
+    <div class="card-body">
+      <h6 class="card-title text-truncate">{{ title }}</h6>
+      <p class="card-text small text-muted text-truncate">{{ author }}</p>
+
+      <!-- Price and Rating -->
+      <div class="card-footer-info" *ngIf="price || rating">
+        <div class="price-rating">
+          <span class="price" *ngIf="price">
+            {{ price | currency:'EGP':'symbol':'1.0-0' }}
+          </span>
+          <span class="rating" *ngIf="rating">★ {{ rating }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

@@ -1,19 +1,26 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router';
 import { Hero } from '../../../../../shared/components/hero/hero';
 import { CategoryCard } from '../../../../../shared/components/category-card/category-card';
 import { BookCard } from '../../../../../shared/components/book-card/book-card';
-import { ChatbotWidgetComponent } from '../../../../../shared/components/chatbot-widget/chatbot-widget.component';
 import { BookService } from '../../../../../core/services/book.service';
 import { Book } from '../../../../../core/models/book.model';
+import { ChatbotWidgetComponent } from '../../../../../shared/components/chatbot-widget/chatbot-widget.component';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, Hero, CategoryCard, BookCard, ChatbotWidgetComponent, RouterLink],
+  imports: [
+    CommonModule,
+    Hero,
+    CategoryCard,
+    BookCard,
+    ChatbotWidgetComponent,
+    RouterLink
+  ],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css',
+  styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
   categories = [
@@ -42,14 +49,21 @@ export class DashboardComponent implements OnInit {
   books: Book[] = [];
   loading: boolean = false;
   error: string = '';
-
   currentCategoryTitle: string = 'Arabic Books';
 
-  constructor(private bookService: BookService, private router: Router) {}
+  constructor(
+    private bookService: BookService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
-    // Load default category (Arabic) for dashboard
-    this.loadBooksByCategory('arabic');
+    this.route.params.subscribe(params => {
+      const category = params['category'] || 'Arabic';
+      const catObj = this.categories.find(c => c.category === category);
+      this.currentCategoryTitle = catObj ? catObj.title : 'Arabic Books';
+      this.loadBooksByCategory(category);
+    });
   }
 
   loadBooksByCategory(category: string): void {
@@ -59,12 +73,19 @@ export class DashboardComponent implements OnInit {
     this.bookService.getBooksByCategory(category).subscribe({
       next: (response) => {
         if (response.status === 'success') {
-          const data = response.data;
-          // Ensure this.books is always an array: wrap single Book into an array
-          this.books = Array.isArray(data) ? data : [data];
-          console.log('🚀 ~ DashboardComponent ~ loadBooksByCategory ~ response:', response);
+          if (Array.isArray((response as any).data)) {
+            this.books = (response as any).data as Book[];
+          } else if ((response as any).data && Array.isArray((response as any).data.books)) {
+            this.books = (response as any).data.books as Book[];
+          } else if ((response as any).data && Array.isArray((response as any).data.data)) {
+            this.books = (response as any).data.data as Book[];
+          } else {
+            this.books = [];
+            this.error = 'Unexpected response format';
+          }
         } else {
           this.error = response.message;
+          this.books = [];
         }
         this.loading = false;
       },
@@ -72,7 +93,7 @@ export class DashboardComponent implements OnInit {
         this.error = 'Failed to load books';
         console.error('Error loading books:', err);
         this.loading = false;
-      },
+      }
     });
   }
 
@@ -81,6 +102,6 @@ export class DashboardComponent implements OnInit {
   }
 
   ShowAll(): void {
-    this.router.navigate(['/books']);
+    this.router.navigate(['/books', 'all']);
   }
 }

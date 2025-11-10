@@ -17,6 +17,8 @@ export class BookCard {
   @Input() image: string = '';
   @Input() title: string = '';
   @Input() author: string = '';
+  @Input() price?: number;
+  @Input() rating?: number;
   @Input() book!: Book;
 
   constructor(private cartService: CartService, private toast: ToastService) { }

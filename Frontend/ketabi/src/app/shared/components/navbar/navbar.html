@@ -22,7 +22,7 @@
         <li class="nav-item">
           <a
             class="nav-link"
-            routerLink="/"
+            routerLink="/dashboard/user"
             routerLinkActive="active"
 
             >Home</a
@@ -31,7 +31,7 @@
 
         <!-- Shop Link -->
         <li class="nav-item">
-          <a class="nav-link" routerLink="/books" routerLinkActive="active">Shop</a>
+          <a class="nav-link" routerLink="/shop" routerLinkActive="active">Shop</a>
         </li>
 
         <!-- About Link -->
@@ -45,8 +45,15 @@
         </li>
       </ul>
 
+
       <!-- Icons on the Right -->
       <ul class="navbar-nav align-items-center">
+
+          <!-- Search Bar -->
+        <div class="navbar-search-inline mx-3">
+          <app-search-bar></app-search-bar>
+        </div>
+
         <!-- Cart Icon -->
         <li class="nav-item">
           <a routerLink="/cart" class="icon-link cart-icon" title="Shopping Cart">
