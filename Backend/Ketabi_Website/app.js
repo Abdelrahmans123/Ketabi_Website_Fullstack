@@ -1,5 +1,5 @@
 import express from "express";
-
+import { warmCache } from "./utils/warmCache.js";
 import authRoutes from "./routes/auth.js";
 import genreRoutes from "./routes/genre.js";
 import bookRouter from "./routes/book.js";
@@ -72,6 +72,9 @@ const bootstrap = async () => {
         inactiveUserReminderJob();
         cleanupOldCartsJob();
         orderCleanupJob();
+           setTimeout(() => {
+        warmCache().catch(console.error);
+      }, 1000);
     });
     initializeIO(server);
 };

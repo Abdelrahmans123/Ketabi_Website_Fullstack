@@ -6,7 +6,7 @@ import { BookDetailsComponent } from './pages/book-details/book-details';
 
 export const BOOK_ROUTES: Routes = [
   {
-    path: '',
+    path: 'books',
     component: BookListComponent,
     canActivate: [AuthGuard],
     title: 'Books',
