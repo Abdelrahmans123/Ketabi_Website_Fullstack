@@ -24,7 +24,7 @@ export class BookCard {
   constructor(private cartService: CartService, private toast: ToastService) { }
 
   addToCart(event: Event) {
-    event.preventDefault();
+    console.log('book: ', this.book)
     this.cartService.addItem(this.book, 1, 'physical');
     this.toast.show('Added to cart!', 'success');
   }

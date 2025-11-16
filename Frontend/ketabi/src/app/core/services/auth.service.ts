@@ -33,6 +33,9 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasValidToken());
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
+  private hasLogOutSubject = new BehaviorSubject(false);
+  public hasLogOut$ = this.hasLogOutSubject.asObservable();
+
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -195,6 +198,7 @@ export class AuthService {
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
+    this.hasLogOutSubject.next(true);
     console.log('✅ Auth data cleared');
   }
 

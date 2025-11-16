@@ -5,8 +5,8 @@ import { CartComponent } from './features/cart/cart.component';
 import { RoleGuard } from './core/guards/role.guard';
 import { ShopComponent } from './features/books/pages/shop/shop';
 import { SearchResultsComponent } from './features/books/pages/search-results/search-results';
-
-export const routes: Routes = [
+import { Payment } from './shared/components/payment/payment';
+export const routes: Routes = [ 
   { path: '', redirectTo: '/dashboard/user', pathMatch: 'full' },
   {
     path: 'books',
@@ -62,6 +62,7 @@ export const routes: Routes = [
     ],
   },
   { path: 'cart', component: CartComponent },
+  { path: 'payment', component: Payment },
   {
     path: 'shop',
     loadComponent: () =>

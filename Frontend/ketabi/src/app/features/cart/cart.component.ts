@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { CommonModule, AsyncPipe, CurrencyPipe } from '@angular/common';
-import { CartItem } from '../../core/models/cart.model';
 import { CartService } from '../../core/services/cart.service';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -9,7 +8,12 @@ import { CouponService } from '../../core/services/coupon.service';
 import { ToastService } from '../../core/services/toast.service';
 import { take } from 'rxjs';
 import { OrderService } from '../../core/services/order.service';
-
+import { CouponState } from '../../core/models/coupon.model';
+import { CartItem } from '../../core/models/cart.model';
+import { loadStripe } from '@stripe/stripe-js';
+import { environment } from '../../../environments/environment';
+import { Router } from '@angular/router';
+import { StripeService } from '../../core/services/stripe.service';
 @Component({
   selector: 'app-cart',
   standalone: true,
@@ -18,23 +22,13 @@ import { OrderService } from '../../core/services/order.service';
   styleUrl: './cart.component.css',
 })
 export class CartComponent implements OnInit {
-  cartItems$: Observable<CartItem[]>;
-  total$: Observable<number>;
 
-  // UI helper properties
-  subtotal = 0;
-  physicalBooksTotal = 0;
-  totalOrder = 0;
-  cartItems: CartItem[] = [];
+  cartItems$!: Observable<CartItem[]>;
+  total$!: Observable<number>;
+  coupon$!: Observable<CouponState>;
 
-  // Coupon stuff
-  couponCode = '';
-  couponError = '';
-  couponSuccess = '';
-  discountAmount = 0;
-  minOrderValue = 0;
-  isLoading = false;
-  discountOfTotal = 0;
+  // coupon
+  couponCode = ''
 
   // gift
   isGift = false;
@@ -46,113 +40,81 @@ export class CartComponent implements OnInit {
   city = '';
   phoneNumber = '';
 
-  constructor(private cartService: CartService, private couponService: CouponService, private toastService: ToastService, private orderService:OrderService) {
+  constructor(
+    private cartService: CartService,
+    private couponService: CouponService,
+    private toastService: ToastService,
+    private orderService: OrderService,
+    private router: Router,
+    private stripeService: StripeService
+  ) { }
+
+  async ngOnInit() {
     this.cartItems$ = this.cartService.cart$.pipe(map((cart) => cart.items));
     this.total$ = this.cartService.cart$.pipe(map((cart) => cart.total));
-  }
-
-  ngOnInit() {
-    // Calculate subtotal dynamically when the cart changes
-    this.cartItems$.subscribe((items) => {
-      this.cartItems = items || [];
-      this.subtotal = items.reduce(
-        (sum, item) =>
-          sum +
-          item.price *
-          item.quantity *
-          (item.type === 'ebook' ? 0.45 : 1) *
-          (1 - item.discount / 100),
-        0
-      );
-      this.physicalBooksTotal = items.reduce(
-        (sum, item) =>
-          sum +
-          item.price *
-          item.quantity *
-          (item.type === 'ebook' ? 0 : 1) *
-          (1 - item.discount / 100),
-        0
-      );
-
-      if (this.subtotal < this.minOrderValue) {
-        this.couponCode = '';
-        this.discountAmount = 0;
-        this.discountOfTotal = 0;
-        this.couponSuccess = '';
-        this.toastService.show(`Coupon removed! $${this.minOrderValue} Minimum Order Value`, "error")
-      }
-      this.totalOrder = Math.round(((this.subtotal * (1 - this.discountAmount / 100))) * 100) / 100;
-    });
+    this.coupon$ = this.couponService.coupon$;
   }
 
   applyCoupon(event: Event) {
     event.preventDefault();
-    if (!this.couponCode.trim()) return;
-
-    this.isLoading = true;
-    this.couponError = '';
-    this.couponSuccess = '';
-
-    this.total$.pipe(take(1)).subscribe(total => {
-      this.couponService.verifyCoupon(this.couponCode.trim(), total).subscribe({
-        next: (res) => {
-          this.isLoading = false;
-          this.discountAmount = res.coupon.discountAmount;
-          this.couponSuccess = res.message;
-          this.minOrderValue = res.coupon.minOrderValue;
-          this.calculateTotalOrder(total);
-          this.toastService.show("Coupon Applied!", "success")
-        },
-        error: (err) => {
-          this.isLoading = false;
-          this.discountAmount = 0;
-          this.minOrderValue = 0;
-          this.couponError = err.error?.message || 'Invalid coupon';
-          (this.couponError === "Unauthorized" || this.couponError === "Token not found") ? this.couponError = "Please login" : this.couponError = this.couponError;
-          this.toastService.show(this.couponError, "error");
-          this.calculateTotalOrder(total);
-        }
+    this.total$
+      .pipe(take(1))
+      .subscribe(total => {
+        this.couponService.applyCode(this.couponCode, total);
       });
-    });
   }
 
-
-  private calculateTotalOrder(total: number) {
-    this.discountOfTotal = Math.round(((this.subtotal * (this.discountAmount / 100))) * 100) / 100
-    this.totalOrder = Math.round(((this.subtotal * (1 - this.discountAmount / 100))) * 100) / 100;
+  get totalOrder() {
+    return this.couponService.calculateDiscountedTotal(this.subtotalBeforeCoupons());
   }
 
   increase(item: CartItem) {
-    this.cartService.updateItem(item.bookId, item.quantity + 1, item.type);
+    this.cartService.updateItem(item._id, item.quantity + 1, item.type);
+    this.checkCouponValidOrNot();
   }
 
   decrease(item: CartItem) {
     if (item.quantity > 1) {
-      this.cartService.updateItem(item.bookId, item.quantity - 1, item.type);
+      this.cartService.updateItem(item._id, item.quantity - 1, item.type);
+      this.checkCouponValidOrNot();
     }
   }
 
   changeType(item: CartItem) {
     const newType = item.type === 'ebook' ? 'physical' : 'ebook';
-    this.cartService.updateItem(item.bookId, item.quantity, newType);
+    this.cartService.updateItem(item._id, item.quantity, newType);
+    this.checkCouponValidOrNot();
   }
 
   remove(item: CartItem) {
-    this.cartService.removeItem(item.bookId);
+    this.cartService.removeItem(item._id);
+    this.checkCouponValidOrNot();
   }
 
   clear() {
     this.cartService.clearCart();
+    this.couponService.resetCoupon();
   }
 
   hasPhysicalBooks(): boolean {
-    return this.cartItems.some(item => item.type === 'physical');
+    return this.cartService.hasPhysicalBooks();
+  }
+
+  subtotalBeforeCoupons() {
+    return this.cartService.getCart().total;
+  }
+
+  checkCouponValidOrNot() {
+    if (this.couponService.getMinOrderValue() > this.subtotalBeforeCoupons()) {
+      this.toastService.show(`Minimum order for coupon ${this.couponCode} is EGP${this.couponService.getMinOrderValue()}`, 'error');
+      this.couponService.resetCoupon();
+    }
   }
 
   checkout() {
     const items = this.cartService.getCartItems();
     const formattedItems = items.map(item => ({
-      book: item.bookId,
+      book: item._id,
       quantity: item.quantity,
       type: item.type
     }));
@@ -172,32 +134,56 @@ export class CartComponent implements OnInit {
     const hasPhysicalBook = formattedItems.some(item => item.type === 'physical');
 
     if (hasPhysicalBook) {
-      if (!this.street || !this.city) {
-        this.toastService.show("Need full address info!", "error")
-        return
-      } else { 
-        orderPayload.shippingAddress = {
-          street: this.street,
-          city: this.city,
-          phoneNumber: this.phoneNumber
-        };
+      const phoneRegex = /^\+?\d{10,15}$/;
+
+      if (!this.street || !this.city || !this.phoneNumber) {
+        this.toastService.show("All shipping fields are required!", "error");
+        return;
       }
+
+      if (!phoneRegex.test(this.phoneNumber)) {
+        this.toastService.show("Invalid phone number format!", "error");
+        return;
+      }
+
+      orderPayload.shippingAddress = {
+        street: this.street,
+        city: this.city,
+        phoneNumber: this.phoneNumber
+      };
+    }
+
+    if (this.totalOrder < 200) {
+      this.toastService.show('Order must be more than EGP200', 'info');
+      return;
     }
 
     console.log('🧾 Order payload:', orderPayload);
-    this.orderService.createOrder(orderPayload).subscribe({
-      next: (res) => {
-        this.toastService.show('Order created successfully!', 'success');
-        this.cartService.clearCart();
+    // call backend to create order + payment intent
+    this.orderService.createOrder(orderPayload).pipe(take(1)).subscribe({
+      next: (res: any) => {
+        const clientSecret = res.client_secret;
+        const orderId = res.data?.orderNumber || res.data?.orderNumber;
+
+        if (!clientSecret) {
+          this.toastService.show('Payment initialization failed', 'error');
+          return;
+        }
+        localStorage.setItem('current_order', JSON.stringify(res.data));
+        // store in stripe service so payment page can use it if router state lost
+        this.stripeService.clientSecret = clientSecret;
+        this.stripeService.orderId = orderId;
+
+        // navigate to payment page and pass data via router state (optional)
+        this.router.navigate(['/payment'], { state: { client_secret: clientSecret, orderId } });
       },
-      error: (err) => {
-        this.toastService.show(err.error?.message || 'Order failed!', 'error');
+      error: err => {
+        this.toastService.show(err.error?.message || 'Order creation failed', 'error');
       }
-    })
+    });
   }
 
-
   trackById(_: number, item: CartItem) {
-    return item.bookId;
+    return item._id;
   }
 }
