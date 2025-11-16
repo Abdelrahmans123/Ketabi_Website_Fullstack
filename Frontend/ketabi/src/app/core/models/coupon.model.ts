@@ -8,3 +8,12 @@ export interface couponResponse {
     minOrderValue:number
   };
 }
+
+export interface CouponState {
+  code: string | null;
+  discountAmount: number;
+  minOrderValue: number;
+  message: string;
+  error: string;
+  isLoading: boolean;
+}

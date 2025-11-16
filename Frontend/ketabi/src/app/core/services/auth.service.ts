@@ -38,6 +38,9 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasValidToken());
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
+  private hasLogOutSubject = new BehaviorSubject(false);
+  public hasLogOut$ = this.hasLogOutSubject.asObservable();
+
   private isLoggingIn = false; // Flag to prevent session check during login
   private authStateSubject = new BehaviorSubject<boolean>(this.isLoggedIn());
   public authState$: Observable<boolean> = this.authStateSubject.asObservable();
@@ -387,6 +390,7 @@ export class AuthService {
     this.currentSessionId = null;
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
+    this.hasLogOutSubject.next(true);
     console.log('✅ Auth data cleared');
   }
 

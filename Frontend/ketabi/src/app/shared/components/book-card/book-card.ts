@@ -44,9 +44,7 @@ export class BookCard implements OnInit, OnDestroy {
   }
 
   addToCart(event: Event) {
-    event.preventDefault();
-    console.log('Hello');
-
+    console.log('book: ', this.book)
     this.cartService.addItem(this.book, 1, 'physical');
     this.toast.show('Added to cart!', 'success');
   }

@@ -8,6 +8,7 @@ export const API_ENDPOINTS = {
   reviews: `${environment.apiBaseUrl}/reviews`,
   coupon: `${environment.apiBaseUrl}/coupons`,
   order: `${environment.apiBaseUrl}/orders`,
+  cart:`${environment.apiBaseUrl}/cart`,
 
   AUTH: {
     LOGIN: '/auth/login',
@@ -25,4 +26,6 @@ export const API_ENDPOINTS = {
     GOOGLE_REGISTER: '/auth/register/google',
     FACEBOOK_REGISTER: '/auth/register/facebook',
   },
+
+  
 };
