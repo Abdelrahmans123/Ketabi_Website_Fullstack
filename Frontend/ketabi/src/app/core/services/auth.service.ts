@@ -17,6 +17,8 @@ import { AuthResponse, RegisterResponse } from '../../features/auth/models/auth-
 import { IUser } from '../models/user.model';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { SocialLoginData } from '../../features/auth/components/register-form/register-form.component';
+import { NotificationService } from './notification.service';
+import { AuthTokens } from '../models/auth.model';
 
 @Injectable({
   providedIn: 'root',
@@ -25,8 +27,11 @@ export class AuthService {
   private readonly API_URL = environment.apiBaseUrl || 'http://localhost:3000/api';
   private readonly TOKEN_KEY = 'token';
   private readonly REFRESH_TOKEN_KEY = 'refreshToken';
-
-  // Initialize from token, not storage
+  private readonly SESSION_ID_KEY = 'sessionId';
+  private readonly ACTIVE_SESSION_KEY = 'activeSession';
+  private currentSessionId: string | null = null;
+  private accessTokenSubject = new BehaviorSubject<string | null>(null);
+  private refreshTokenSubject = new BehaviorSubject<string | null>(null);
   private currentUserSubject = new BehaviorSubject<IUser | null>(this.getUserFromToken());
   public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -36,14 +41,161 @@ export class AuthService {
   private hasLogOutSubject = new BehaviorSubject(false);
   public hasLogOut$ = this.hasLogOutSubject.asObservable();
 
+  private isLoggingIn = false; // Flag to prevent session check during login
+  private authStateSubject = new BehaviorSubject<boolean>(this.isLoggedIn());
+  public authState$: Observable<boolean> = this.authStateSubject.asObservable();
+  private authRole = new BehaviorSubject<string | null>(this.getUserRole());
+  public authRole$ = this.authRole.asObservable();
   constructor(
     private http: HttpClient,
     private router: Router,
-    private socialAuthService: SocialAuthService
+    private socialAuthService: SocialAuthService,
+    private notificationService: NotificationService
   ) {
     console.log('🔵 AuthService initialized');
     console.log('Initial auth state:', this.isAuthenticatedSubject.value);
     console.log('Initial user:', this.currentUserSubject.value);
+
+    // Listen for storage events from other tabs
+    this.listenToStorageEvents();
+
+    // Check if current session is still active
+    this.checkSessionValidity();
+  }
+
+  // ==========================================
+  // SESSION MANAGEMENT
+  // ==========================================
+  getCurrentUserId(): string | null {
+    const user = this.currentUserSubject.value;
+    return user ? user.id : null;
+  }
+  private generateSessionId(): string {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  getCurrentUserName(): string | null {
+    const user = this.currentUserSubject.value;
+    return user ? user.name : null;
+  }
+  getAdminId(): string | null {
+    // Assuming admin ID is fixed; replace with actual logic if needed
+    return '690bc6cc694af80e288b9785';
+  }
+  private listenToStorageEvents(): void {
+    window.addEventListener('storage', (event: StorageEvent) => {
+      console.log('🔔 Storage event detected:', {
+        key: event.key,
+        oldValue: event.oldValue?.substring(0, 50),
+        newValue: event.newValue?.substring(0, 50),
+        currentSessionId: this.currentSessionId,
+      });
+
+      // IMPORTANT: Ignore storage events if we're currently logging in
+      // This prevents us from logging ourselves out during our own login process
+      if (this.isLoggingIn) {
+        console.log('⚪ Ignoring storage event - login in progress');
+        return;
+      }
+
+      // Detect when active session changes in another tab
+      if (event.key === this.ACTIVE_SESSION_KEY) {
+        const newActiveSession = event.newValue;
+        const oldActiveSession = event.oldValue;
+
+        // If a NEW session is created (someone logged in on another tab)
+        // and this tab currently HAS a session, log out this tab
+        if (
+          newActiveSession &&
+          oldActiveSession &&
+          newActiveSession !== oldActiveSession &&
+          this.currentSessionId &&
+          this.currentSessionId === oldActiveSession
+        ) {
+          console.log('🔴 New login detected in another tab. Logging out this (old) tab.');
+          console.log('My session:', this.currentSessionId);
+          console.log('Old session:', oldActiveSession);
+          console.log('New session:', newActiveSession);
+          this.handleForcedLogout();
+        }
+      }
+
+      // Detect when tokens are removed (logout in another tab)
+      // Only trigger if token is REMOVED (not updated)
+      if (event.key === this.TOKEN_KEY && event.oldValue && !event.newValue) {
+        console.log('🔴 Logout detected in another tab.');
+        this.handleForcedLogout();
+      }
+    });
+  }
+  // Add this method to your AuthService class
+
+  getCurrentUserRole(): string | null {
+    // Or if you decode it from the token:
+    const token = this.getAccessToken();
+    if (token) {
+      const decoded = this.decodeToken(token);
+      return decoded.role || null;
+    }
+    return null;
+  }
+  private checkSessionValidity(): void {
+    // Don't check if we're currently logging in
+    if (this.isLoggingIn) {
+      console.log('⚪ Skipping session check - login in progress');
+      return;
+    }
+
+    const activeSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
+    const storedSessionId = localStorage.getItem(this.SESSION_ID_KEY);
+    const token = localStorage.getItem(this.TOKEN_KEY);
+
+    console.log('🔍 Checking session validity:', {
+      activeSession,
+      storedSessionId,
+      hasToken: !!token,
+      currentSessionId: this.currentSessionId,
+      isLoggingIn: this.isLoggingIn,
+    });
+
+    // Set current session ID if it exists
+    if (storedSessionId) {
+      this.currentSessionId = storedSessionId;
+    }
+
+    // Only check validity if we have a stored session and token
+    // If there's no token, this is likely a fresh page load before login
+    if (!token || !storedSessionId) {
+      console.log('⚪ No existing session found - fresh start');
+      return;
+    }
+
+    // If there's an active session and it's different from ours,
+    // it means we're an old session that needs to be logged out
+    if (activeSession && storedSessionId && activeSession !== storedSessionId) {
+      console.log('🔴 A newer session exists. Logging out this old session.');
+      this.handleForcedLogout();
+    } else {
+      console.log('✅ Session is valid and active');
+    }
+  }
+  private handleForcedLogout(): void {
+    // Clear local data without calling backend
+    this.clearAuthData();
+
+    // Show notification (optional)
+    this.showLogoutNotification();
+
+    // Redirect to login
+    this.router.navigate(['/auth/login'], {
+      queryParams: { reason: 'session_expired' },
+    });
+  }
+
+  private showLogoutNotification(): void {
+    this.notificationService.warning(
+      'You have been logged out because you signed in on another tab or device.',
+      6000
+    );
   }
 
   // ==========================================
@@ -52,8 +204,21 @@ export class AuthService {
 
   setTokens(accessToken: string, refreshToken: string): void {
     console.log('🔵 setTokens called');
+
+    // Mark that we're actively logging in
+    this.isLoggingIn = true;
+
+    // Generate new session ID
+    this.currentSessionId = this.generateSessionId();
+
+    // IMPORTANT: Set all data atomically to prevent race conditions
+    // First update the active session to claim this as the new active session
+    localStorage.setItem(this.ACTIVE_SESSION_KEY, this.currentSessionId);
+
+    // Then set tokens and session info
     localStorage.setItem(this.TOKEN_KEY, accessToken);
     localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem(this.SESSION_ID_KEY, this.currentSessionId);
 
     // Decode token and extract user info
     const user = this.getUserFromToken();
@@ -66,6 +231,12 @@ export class AuthService {
     console.log('✅ Auth state updated');
     console.log('✅ isAuthenticated:', this.isAuthenticatedSubject.value);
     console.log('✅ currentUser:', this.currentUserSubject.value);
+    console.log('✅ Session ID:', this.currentSessionId);
+
+    // Clear the login flag after a short delay
+    setTimeout(() => {
+      this.isLoggingIn = false;
+    }, 500);
   }
 
   getAccessToken(): string | null {
@@ -74,6 +245,10 @@ export class AuthService {
 
   getRefreshToken(): string | null {
     return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+  setAccessToken(token: string): void {
+    localStorage.setItem(this.TOKEN_KEY, token);
+    this.accessTokenSubject.next(token);
   }
 
   // ==========================================
@@ -194,8 +369,25 @@ export class AuthService {
 
   clearAuthData(): void {
     console.log('🔵 Clearing auth data');
+
+    // Get current active session before clearing
+    const currentActiveSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
+
+    // Clear tokens and session ID
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    localStorage.removeItem(this.SESSION_ID_KEY);
+
+    // Only clear activeSession if it belongs to this tab
+    // This prevents clearing when we're just a passive logout (forced by another tab)
+    if (currentActiveSession === this.currentSessionId) {
+      localStorage.removeItem(this.ACTIVE_SESSION_KEY);
+      console.log('✅ Cleared active session (was mine)');
+    } else {
+      console.log('⚪ Kept active session (belongs to another tab)');
+    }
+
+    this.currentSessionId = null;
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
     this.hasLogOutSubject.next(true);
@@ -387,24 +579,45 @@ export class AuthService {
       .post(`${this.API_URL}${API_ENDPOINTS.AUTH.RESET_PASSWORD}`, data)
       .pipe(catchError(this.handleError.bind(this)));
   }
+  setRefreshToken(token: string): void {
+    localStorage.setItem(this.REFRESH_TOKEN_KEY, token);
+    this.refreshTokenSubject.next(token);
+  }
 
-  refreshToken(): Observable<AuthResponse> {
+  refreshToken(): Observable<any> {
     const refreshToken = this.getRefreshToken();
+
     if (!refreshToken) {
-      return throwError(() => new Error('No refresh token available'));
+      throw new Error('No refresh token available');
     }
 
+    // Send refresh token in the Authorization header
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${refreshToken}`, // Send refresh token as Bearer token
+    });
+
     return this.http
-      .post<AuthResponse>(`${this.API_URL}${API_ENDPOINTS.AUTH.REFRESH_TOKEN}`, { refreshToken })
+      .post<any>(
+        `${this.API_URL}/auth/refresh`,
+        {}, // Empty body, token is in header
+        { headers }
+      )
       .pipe(
         tap((response) => {
+          // Save the new access token
           if (response.data?.accessToken) {
-            this.setTokens(response.data.accessToken, response.data.refreshToken);
+            this.setAccessToken(response.data.accessToken);
+          } else if (response.accessToken) {
+            this.setAccessToken(response.accessToken);
           }
-        }),
-        catchError((error) => {
-          this.clearAuthData();
-          return throwError(() => error);
+
+          // If a new refresh token is provided, update it
+          if (response.data?.refreshToken) {
+            this.setRefreshToken(response.data.refreshToken);
+          } else if (response.refreshToken) {
+            this.setRefreshToken(response.refreshToken);
+          }
         })
       );
   }
@@ -425,7 +638,7 @@ export class AuthService {
         this.router.navigate(['/dashboard/publisher']);
         break;
       case 'user':
-        this.router.navigate(['/dashboard/user']);
+        this.router.navigate(['/home']);
         break;
       default:
         console.warn('⚠️ Unknown role, redirecting to home');

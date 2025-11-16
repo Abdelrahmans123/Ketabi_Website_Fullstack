@@ -7,11 +7,9 @@ import { HttpClient } from '@angular/common/http';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { ToastService } from './toast.service';
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
-
 export class CartService {
-
   private readonly CART_KEY = 'ketabi_cart';
   private cartSubject = new BehaviorSubject<Cart>({ items: [], total: 0 });
   public cart$ = this.cartSubject.asObservable();
@@ -123,7 +121,7 @@ export class CartService {
         name: book.name,
         price: book.price,
         discount: book.discount,
-        image: { url: book.image.url },
+        image: { url: book.image ? book.image.url : 'default-book.jpg' },
         stock: book.stock,
         type: type,
         quantity: quantity
@@ -167,7 +165,7 @@ export class CartService {
   clearCart() {
     const cart: Cart = {
       items: [],
-      total: 0
+      total: 0,
     };
     this.cartSubject.next(cart);
     localStorage.setItem(this.CART_KEY, JSON.stringify(cart));
@@ -240,6 +238,3 @@ export class CartService {
   }
 
 }
-
-
-
