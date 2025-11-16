@@ -158,15 +158,20 @@
   transform: translateY(-1px);
 }
 
+.btn-checkout:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
   .cart-item {
-    width: 48%; /* 2 per row on tablets */
+    width: 48%; 
   }
 }
 
 @media (max-width: 480px) {
   .cart-item {
-    width: 100%; /* full width on mobile */
+    width: 100%; 
   }
 }

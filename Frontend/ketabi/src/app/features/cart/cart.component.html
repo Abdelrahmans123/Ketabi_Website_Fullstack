@@ -168,8 +168,8 @@
         </div>
 
         <!-- Checkout Button -->
-        <button class="btn btn-checkout w-100 mt-4" (click)="checkout()">
-          <i class="fa-solid fa-credit-card me-2"></i> Checkout
+        <button class="btn btn-checkout w-100 mt-4" (click)="checkout()" [disabled]="checkingOut" >
+          <i class="fa-solid fa-credit-card me-2"></i> {{checkingOut ? 'Checking Out': 'Check Out'}}
         </button>
 
       </div>

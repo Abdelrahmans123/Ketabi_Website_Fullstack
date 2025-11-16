@@ -40,6 +40,8 @@ export class CartComponent implements OnInit {
   city = '';
   phoneNumber = '';
 
+  checkingOut = false;
+
   constructor(
     private cartService: CartService,
     private couponService: CouponService,
@@ -112,6 +114,7 @@ export class CartComponent implements OnInit {
   }
 
   checkout() {
+    this.checkingOut = true;
     const items = this.cartService.getCartItems();
     const formattedItems = items.map(item => ({
       book: item._id,
@@ -138,11 +141,13 @@ export class CartComponent implements OnInit {
 
       if (!this.street || !this.city || !this.phoneNumber) {
         this.toastService.show("All shipping fields are required!", "error");
+        this.checkingOut = false;
         return;
       }
 
       if (!phoneRegex.test(this.phoneNumber)) {
         this.toastService.show("Invalid phone number format!", "error");
+        this.checkingOut = false;
         return;
       }
 
@@ -155,6 +160,7 @@ export class CartComponent implements OnInit {
 
     if (this.totalOrder < 200) {
       this.toastService.show('Order must be more than EGP200', 'info');
+        this.checkingOut = false;
       return;
     }
 
@@ -167,6 +173,7 @@ export class CartComponent implements OnInit {
 
         if (!clientSecret) {
           this.toastService.show('Payment initialization failed', 'error');
+        this.checkingOut = false;
           return;
         }
         localStorage.setItem('current_order', JSON.stringify(res.data));
@@ -179,6 +186,7 @@ export class CartComponent implements OnInit {
       },
       error: err => {
         this.toastService.show(err.error?.message || 'Order creation failed', 'error');
+        this.checkingOut = false;
       }
     });
   }
