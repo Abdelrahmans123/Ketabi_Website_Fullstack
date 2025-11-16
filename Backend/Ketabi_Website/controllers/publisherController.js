@@ -59,7 +59,8 @@ export const getPublishedBooks = asyncHandler(async (req, res, next) => {
         model: Book,
         filter: { _id: { $in: publisher.booksPublished } },
         skip,
-        limit
+        limit,
+        populate: "genre"
     });
 
     return successResponse({

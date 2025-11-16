@@ -52,6 +52,7 @@ export class PublisherBooksComponent implements OnInit {
     ngOnInit(): void {
         const id = this.publisherId || this.getCurrentUserId();
         if (id) {
+            this.loadGenres();
             this.loadBooks(id);
         } else {
             this.error = 'Publisher ID is required';
@@ -68,6 +69,23 @@ export class PublisherBooksComponent implements OnInit {
 
     dismissFeedback(): void {
         this.feedbackMessage = null;
+    }
+
+    loadGenres(): void {
+        if (this.genres.length) {
+            return;
+        }
+        this.genresLoading = true;
+        this.publisherService.getGenres().subscribe({
+            next: (genres) => {
+                this.genres = genres;
+                this.genresLoading = false;
+            },
+            error: (err) => {
+                this.genresLoading = false;
+                this.setFeedback('error', err.error?.message || 'Failed to load genres.');
+            }
+        });
     }
 
     loadBooks(publisherId: string, page: number = 1): void {
@@ -171,6 +189,15 @@ export class PublisherBooksComponent implements OnInit {
         if (payload['author']) updatePayload.author = String(payload['author']).trim();
         if (payload['description']) updatePayload.description = String(payload['description']).trim();
         if (payload['Edition']) updatePayload.Edition = String(payload['Edition']).trim();
+        if (payload['genre_id']) updatePayload.genre_id = String(payload['genre_id']).trim();
+        if (payload['recommendedAge']) {
+            const age = String(payload['recommendedAge']) as UpdateBookRequest['recommendedAge'];
+            updatePayload.recommendedAge = age;
+        }
+        if (payload['bookLanguage']) {
+            const lang = String(payload['bookLanguage']) as UpdateBookRequest['bookLanguage'];
+            updatePayload.bookLanguage = lang;
+        }
         if (payload['price'] !== undefined && payload['price'] !== '') updatePayload.price = Number(payload['price']);
         if (payload['discount'] !== undefined && payload['discount'] !== '') updatePayload.discount = Number(payload['discount']);
         if (payload['cost'] !== undefined && payload['cost'] !== '') updatePayload.cost = Number(payload['cost']);

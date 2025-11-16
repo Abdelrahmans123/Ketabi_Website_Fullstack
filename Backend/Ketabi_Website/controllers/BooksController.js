@@ -129,7 +129,6 @@ export const getBookByID = asyncHandler(async (req, res, next) => {
 export const updateBook = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
 
-    // Get the old book data before update
     const oldBook = await findById({ model: Book, id });
     if (!oldBook) {
         const error = new AppError("Book Not Found", 404);
@@ -141,6 +140,20 @@ export const updateBook = asyncHandler(async (req, res, next) => {
             const error = new AppError("Can't update book you don't own!", 404);
             return next(error);
         }
+    }
+
+    if (req.body.genre_id) {
+        if (!mongoose.Types.ObjectId.isValid(String(req.body.genre_id))) {
+            return next(new AppError("Invalid genre_id", 400));
+        }
+
+        const genre = await findById({ model: Genre, id: req.body.genre_id });
+        if (!genre) {
+            return next(new AppError("No Such genre exists", 404));
+        }
+
+        req.body.genre = genre._id;
+        delete req.body.genre_id;
     }
 
     const isTheSameBook = Object.keys(req.body).every((key) => {
