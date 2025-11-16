@@ -9,12 +9,6 @@ export const DASHBOARD_ROUTES: Routes = [
     pathMatch: 'full',
   },
   {
-    path: 'user',
-    loadComponent: () =>
-      import('./user/components/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-    title: 'Dashboard',
-  },
-  {
     path: 'admin',
     loadComponent: () =>
       import('./admin/components/dashboard/dashboard.component').then((m) => m.DashboardComponent),

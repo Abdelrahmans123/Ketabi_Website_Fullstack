@@ -1,11 +1,7 @@
 <div class="book-card-wrapper">
   <div class="book-card h-100">
     <!-- Book Image -->
-    <img
-      [src]="image || 'assets/images/book-placeholder.png'"
-      [alt]="title"
-      class="card-img-top"
-    />
+    <img [src]="image || 'assets/images/book-placeholder.png'" [alt]="title" class="card-img-top" />
 
     <!-- Overlay with Actions -->
     <div class="card-overlay">
@@ -29,6 +25,18 @@
         >
           <i class="fa fa-eye" aria-hidden="true"></i>
         </button>
+        <button
+          class="overlay-link btn-wishlist"
+          title="Add to wishlist"
+          aria-label="Add to wishlist"
+          (click)="addToWishlist($event)"
+        >
+          @if(isInWishlist) {
+          <i class="fa-solid fa-heart text-danger"></i>
+          } @else {
+          <i class="fa-solid fa-heart"></i>
+          }
+        </button>
       </div>
     </div>
 
@@ -41,7 +49,7 @@
       <div class="card-footer-info" *ngIf="price || rating">
         <div class="price-rating">
           <span class="price" *ngIf="price">
-            {{ price | currency:'EGP':'symbol':'1.0-0' }}
+            {{ price | currency : 'EGP' : 'symbol' : '1.0-0' }}
           </span>
           <span class="rating" *ngIf="rating">★ {{ rating }}</span>
         </div>

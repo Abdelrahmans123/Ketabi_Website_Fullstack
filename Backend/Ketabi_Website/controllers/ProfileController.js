@@ -111,67 +111,130 @@ export const getLibrary = asyncHandler(async (req, res, next) => {
     });
 });
 
-export const addToWishlist = asyncHandler(async (req, res, next) => {
-    const { bookId } = req.body;
-    const userId = req.user._id;
-
-    const book = await findById({ model: Book, id: bookId });
-    if (!book) {
-        throw new AppError("Book not found", 404);
-    }
-    const user = await findByIdAndUpdate({
-        model: User,
-        id: userId,
-        data: { $addToSet: { wishlist: bookId } },
-        populate: {
-            path: "wishlist",
-            select: "name author price image status",
-        },
-    });
-
-    return successResponse({
-        res,
-        statusCode: 200,
-        message: `"${book.name}" added to your wishlist. We'll notify you when it's available!`,
-        data: user.wishlist,
-    });
-});
-
-export const removeFromWishlist = asyncHandler(async (req, res, next) => {
-    const { bookId } = req.params;
-    const userId = req.user._id;
-
-    const user = await findByIdAndUpdate({
-        model: User,
-        id: userId,
-        data: { $pull: { wishlist: bookId } },
-        populate: {
-            path: "wishlist",
-            select: "name author price image status",
-        },
-    });
-
-    if (!user) {
-        throw new AppError("User not found", 404);
-    }
-
-    return successResponse({
-        res,
-        statusCode: 200,
-        message: "Book removed from wishlist",
-        data: user.wishlist,
-    });
-});
-
 export const getWishlist = asyncHandler(async (req, res, next) => {
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     const user = await findById({
         model: User,
         id: userId,
         populate: {
-            path: "wishlist",
-            select: "name author price image status",
+            path: "wishlist.book",
+            select: "name author price discount image status description edition recommendedAge bookLanguage genre stock",
+        },
+    });
+
+    if (!user) throw new AppError("User not found", 404);
+    // Format the wishlist properly
+    const formattedWishlist = user.wishlist
+        .filter((item) => item.book) // Filter out items with null books
+        .map((item) => {
+            // Convert Mongoose document to plain object if needed
+            const bookData = item.book.toObject
+                ? item.book.toObject()
+                : item.book;
+
+            return {
+                book: bookData,
+                addedDate: item.addedDate || new Date().toISOString(),
+            };
+        });
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "Wishlist retrieved successfully",
+        data: formattedWishlist,
+    });
+});
+
+export const addToWishlist = asyncHandler(async (req, res, next) => {
+    const { bookId } = req.body;
+    const userId = req.user.id;
+
+    if (!bookId) {
+        throw new AppError("Book ID is required", 400);
+    }
+
+    const book = await findById({ model: Book, id: bookId });
+    if (!book) {
+        throw new AppError("Book not found", 404);
+    }
+
+    const user = await findById({
+        model: User,
+        id: userId,
+        populate: {
+            path: "wishlist.book",
+            select: "_id",
+        },
+    });
+    const alreadyInWishlist = user.wishlist.some((item) => {
+        if (!item || !item.book || !item.book._id) return false;
+        return item.book._id.toString() === bookId.toString();
+    });
+
+    if (alreadyInWishlist) {
+        throw new AppError("Book already in wishlist", 400);
+    }
+    const updatedUser = await findByIdAndUpdate({
+        model: User,
+        id: userId,
+        data: {
+            $push: {
+                wishlist: {
+                    book: bookId,
+                    addedDate: new Date(),
+                },
+            },
+        },
+        populate: {
+            path: "wishlist.book",
+            select: "name author price discount image status description edition recommendedAge bookLanguage genre stock",
+        },
+    });
+
+    if (!updatedUser) {
+        throw new AppError("Failed to update wishlist", 500);
+    }
+
+    // Format response - filter out any null books and format properly
+    const formattedWishlist = updatedUser.wishlist
+        .filter((item) => item && item.book)
+        .map((item) => {
+            // Handle Mongoose document conversion
+            const bookData = item.book.toObject
+                ? item.book.toObject()
+                : item.book;
+            const dateString =
+                item.addedDate instanceof Date
+                    ? item.addedDate.toISOString()
+                    : item.addedDate || new Date().toISOString();
+
+            return {
+                book: bookData,
+                addedDate: dateString,
+            };
+        });
+
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: `"${book.name}" added to your wishlist. We'll notify you when it's available!`,
+        data: formattedWishlist,
+    });
+});
+
+// Also update removeFromWishlist
+export const removeFromWishlist = asyncHandler(async (req, res, next) => {
+    const { bookId } = req.params;
+    const userId = req.user.id;
+
+    const user = await findByIdAndUpdate({
+        model: User,
+        id: userId,
+        data: { $pull: { wishlist: { book: bookId } } },
+        populate: {
+            path: "wishlist.book",
+            select: "name author price discount image status description edition recommendedAge bookLanguage genre stock",
         },
     });
 
@@ -179,10 +242,18 @@ export const getWishlist = asyncHandler(async (req, res, next) => {
         throw new AppError("User not found", 404);
     }
 
+    // Format response
+    const formattedWishlist = user.wishlist
+        .filter((item) => item.book)
+        .map((item) => ({
+            book: item.book.toObject ? item.book.toObject() : item.book,
+            addedDate: item.addedDate || new Date().toISOString(),
+        }));
+
     return successResponse({
         res,
         statusCode: 200,
-        message: "Wishlist retrieved successfully",
-        data: user.wishlist || [],
+        message: "Book removed from wishlist",
+        data: formattedWishlist,
     });
 });
