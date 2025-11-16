@@ -4,16 +4,13 @@ import { AuthGuard } from './core/guards/auth.guard';
 import { CartComponent } from './features/cart/cart.component';
 import { RoleGuard } from './core/guards/role.guard';
 import { ShopComponent } from './features/books/pages/shop/shop';
+import { MyLibrary } from './shared/components/my-library/my-library';
 import { SearchResultsComponent } from './features/books/pages/search-results/search-results';
+import { MyOrdersComponent } from './shared/components/my-orders/my-orders';
 import { Payment } from './shared/components/payment/payment';
 
-
 export const routes: Routes = [
-  {
-    path: '',
-    redirectTo: 'home',
-    pathMatch: 'full',
-  },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
   {
     path: 'books',
     loadChildren: () => import('./features/books/book.routes').then((m) => m.BOOK_ROUTES),
@@ -82,7 +79,16 @@ export const routes: Routes = [
   {
     path: 'shop',
     loadComponent: () => import('./features/books/pages/shop/shop').then((m) => m.ShopComponent),
-    title: 'Shop',
+  },
+    {
+    path: 'my-library',
+    component: MyLibrary,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'my-orders',
+    component: MyOrdersComponent,
+    canActivate: [AuthGuard]
   },
   { path: 'search', component: SearchResultsComponent },
   {

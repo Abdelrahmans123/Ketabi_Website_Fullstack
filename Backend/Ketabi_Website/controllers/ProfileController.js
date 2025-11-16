@@ -93,8 +93,7 @@ export const getLibrary = asyncHandler(async (req, res, next) => {
         id: userId,
         populate: {
             path: "library",
-            model: "Book",
-            select: "name author categoryName price type avgRating coverImage", // optional fields
+            model: "Book"
         },
         select: "library",
     });

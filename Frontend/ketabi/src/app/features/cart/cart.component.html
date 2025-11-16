@@ -27,7 +27,7 @@
         <div *ngFor="let item of items; trackBy: trackById" class="cart-item shadow-sm p-3 rounded-3">
           <div class="d-flex flex-column align-items-center gap-2">
             <!-- Book Cover -->
-            <img [src]="item.image.url" alt="{{ item.name }}" class="cart-item-img rounded-2 shadow-sm" />
+            <img [src]="item.image.url || 'default-book.jpg'" alt="{{ item.name }}" class="cart-item-img rounded-2 shadow-sm" />
 
             <!-- Book Info -->
             <div class="text-center flex-grow-1">
@@ -157,6 +157,25 @@
           </div>
         </div>
         }
+
+        <!--Payment method -->
+         <div class="payment-section mb-3">
+          <h6 class="fw-semibold mb-2 text-white">Payment Method</h6>
+          <div class="form-check text-light-brown">
+            <input class="form-check-input" type="radio" name="paymentMethod" id="Stripe"
+              value="Stripe" [(ngModel)]="paymentMethod" />
+            <label class="form-check-label" for="Stripe">
+              💳 Stripe (Credit Card)
+            </label>
+          </div>
+          <div class="form-check text-light-brown">
+            <input class="form-check-input" type="radio" name="paymentMethod" id="Paymob"
+              value="Paymob" [(ngModel)]="paymentMethod"/>
+            <label class="form-check-label" for="Paymob">
+              🏦 Paymob (Egyptian Payment Gateway)
+            </label>
+          </div>
+        </div>
 
 
         <hr class="border-light mb-3" />

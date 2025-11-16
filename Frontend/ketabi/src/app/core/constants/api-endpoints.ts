@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
   coupon: `${environment.apiBaseUrl}/coupons`,
   order: `${environment.apiBaseUrl}/orders`,
   cart:`${environment.apiBaseUrl}/cart`,
+  profile: `${environment.apiBaseUrl}/users`,
 
   AUTH: {
     LOGIN: '/auth/login',

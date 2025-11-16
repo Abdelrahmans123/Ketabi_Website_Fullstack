@@ -156,6 +156,11 @@ export class PublisherOrdersComponent implements OnInit {
         return item.book?.name || 'Unknown Book';
     }
 
+    getEditionName(item:any):string{
+        if (typeof item.book === 'string') return 'Unknown Edition';
+        return item.book?.Edition || 'Unknown Edition';
+    }
+
     getStatusClass(status: string): string {
         const statusLower = status.toLowerCase().replace(' ', '-');
         return `status-${statusLower}`;
