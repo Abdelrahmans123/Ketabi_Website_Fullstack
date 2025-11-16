@@ -102,13 +102,14 @@ export const getPublisherOrders = asyncHandler(async (req, res, next) => {
 
     const skip = Math.max(0, (page - 1) * limit);
 
-    const publisherOrders = await findAll({
-        model: PublisherOrder,
-        filter: { publisher: publisherId },
-        skip,
-        limit: limit,
-        sort: { createdAt: -1 }
-    });
+    const publisherOrders = await PublisherOrder.find({ publisher: publisherId })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 })
+        .populate({
+            path: "items.book",
+            select: "name Edition"   // return only the book name
+        });
 
     return successResponse({
         res,

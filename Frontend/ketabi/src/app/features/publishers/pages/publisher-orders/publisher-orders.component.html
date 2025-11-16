@@ -25,46 +25,90 @@
                             <th>Order #</th>
                             <th>Customer</th>
                             <th>Book</th>
+                            <th>Edition</th>
                             <th>Quantity</th>
                             <th>Delivery Status</th>
                             <th>Payment Status</th>
+                            <th>Shipping</th>
                             <th>Total</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         <ng-container *ngFor="let order of orders">
                             <tr *ngFor="let item of order.items; let i = index">
-                                <td class="order-number">{{ order._id.slice(-8) }}</td>
+
+                                <!-- Order Number -->
+                                <td class="order-number">
+                                    {{ order._id.slice(-8) }}
+                                </td>
+
+                                <!-- Customer Info -->
                                 <td>
                                     <div class="customer-info">
-                                        <div class="customer-name">{{ order.name }}</div>
-                                        <div class="customer-email">{{ order.email }}</div>
+                                        <div class="customer-name">Name: {{ order.name }}</div>
+                                        <div class="customer-email">Email: {{ order.email }}</div>
                                     </div>
                                 </td>
-                                <td class="book-name">{{ getBookName(item) }}</td>
+
+                                <!-- Book -->
+                                <td class="book-name">
+                                    {{ getBookName(item) }}
+                                </td>
+
+                                <td class="book-name">
+                                    {{ getEditionName(item) }}
+                                </td>
+
+                                <!-- Quantity -->
                                 <td>{{ item.quantity }}</td>
+
+                                <!-- Delivery Status -->
                                 <td>
                                     <span class="status-badge" [class]="getStatusClass(item.deliveryStatus)">
                                         {{ item.deliveryStatus }}
                                     </span>
                                 </td>
+
+                                <!-- Payment Status -->
                                 <td>
                                     <span class="status-badge" [class]="getStatusClass(item.paymentStatus)">
                                         {{ item.paymentStatus }}
                                     </span>
                                 </td>
-                                <td class="total-price">${{ item.price * item.quantity }}</td>
+
+                                <!-- Shipping Info -->
+                                <td class="shipping-info">
+                                    <ng-container *ngIf="order.shippingAddress; else noShipping">
+                                        <div>Street: {{ order.shippingAddress.street }}</div>
+                                        <div>City: {{ order.shippingAddress.city }}</div>
+                                        <div>phone: {{ order.shippingAddress.phoneNumber }}</div>
+                                    </ng-container>
+
+                                    <ng-template #noShipping>
+                                        <span class="no-shipping">—</span>
+                                    </ng-template>
+                                </td>
+
+                                <!-- Total (price * qty * discount%) -->
+                                <td class="total-price">
+                                    {{ item.price * item.quantity * (1 - item.discount / 100) | currency: 'EGP' }}
+                                </td>
+
+                                <!-- Actions -->
                                 <td class="actions">
                                     <button class="btn-update" (click)="openUpdateModal(order, i)">
                                         Update
                                     </button>
                                 </td>
+
                             </tr>
                         </ng-container>
                     </tbody>
                 </table>
             </div>
+
 
             <!-- Pagination -->
             <div *ngIf="totalPages > 1" class="pagination">
@@ -122,4 +166,3 @@
         </div>
     </div>
 </div>
-

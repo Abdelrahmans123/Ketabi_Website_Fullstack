@@ -126,7 +126,7 @@ import { validate, queryValidate } from "../middlewares/validation.js";
 import { createOrder, getOrderHistory, getOrdersAdmin } from "../controllers/orderController.js"
 import { createOrderSchema, getUserOrderSchema, getAllOrdersSchema } from "../validations/order.js";
 import { roleEnum } from "../utils/roleEnum.js";
-
+import { handlePaymobCallback } from "../controllers/paymobWebhook.js";
 const router = express.Router();
 
 // create order for users
@@ -137,5 +137,13 @@ router.get('/', authenticate, authorize(roleEnum.admin), queryValidate(getAllOrd
 
 // get user own orders  
 router.get('/order-history', authenticate, queryValidate(getUserOrderSchema), getOrderHistory)
+
+
+
+router.post('/payment/paymob/callback', handlePaymobCallback);
+router.get('/payment/paymob/callback', handlePaymobCallback);
+router.get('/payment/paymob/test', (req, res) => {
+    res.json({ message: 'Webhook endpoint working!' });
+});
 
 export default router;

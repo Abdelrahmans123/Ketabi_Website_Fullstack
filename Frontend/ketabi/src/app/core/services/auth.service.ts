@@ -390,7 +390,6 @@ export class AuthService {
     this.currentSessionId = null;
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
-    this.hasLogOutSubject.next(true);
     console.log('✅ Auth data cleared');
   }
 
@@ -558,10 +557,12 @@ export class AuthService {
       .pipe(
         tap(() => {
           this.clearAuthData();
+          this.hasLogOutSubject.next(true);
           this.router.navigate(['/auth/login']);
         }),
         catchError((error) => {
           this.clearAuthData();
+          this.hasLogOutSubject.next(true);
           this.router.navigate(['/auth/login']);
           return throwError(() => error);
         })
