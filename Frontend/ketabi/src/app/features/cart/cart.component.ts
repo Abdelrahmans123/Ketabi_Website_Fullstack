@@ -41,6 +41,7 @@ export class CartComponent implements OnInit {
   phoneNumber = '';
 
   checkingOut = false;
+  paymentMethod: 'Stripe' | 'Paymob' = 'Stripe';
 
   constructor(
     private cartService: CartService,
@@ -124,7 +125,7 @@ export class CartComponent implements OnInit {
 
     const orderPayload: any = {
       items: formattedItems,
-      paymentMethod: "Stripe",
+      paymentMethod: this.paymentMethod,
       isGift: this.isGift,
       coupon: this.couponCode || 'No Coupon'
     };
@@ -158,34 +159,41 @@ export class CartComponent implements OnInit {
       };
     }
 
-    if (this.totalOrder < 200) {
+    if (this.totalOrder < 200 && this.paymentMethod === 'Stripe') {
       this.toastService.show('Order must be more than EGP200', 'info');
-        this.checkingOut = false;
+      this.checkingOut = false;
       return;
     }
 
-    console.log('🧾 Order payload:', orderPayload);
+    console.log('Order payload:', orderPayload);
     // call backend to create order + payment intent
     this.orderService.createOrder(orderPayload).pipe(take(1)).subscribe({
       next: (res: any) => {
-        const clientSecret = res.client_secret;
-        const orderId = res.data?.orderNumber || res.data?.orderNumber;
+        if (res.payment_method === 'Stripe') {
+          const clientSecret = res.client_secret;
+          const orderId = res.data?.orderNumber || res.data?.orderNumber;
 
-        if (!clientSecret) {
-          this.toastService.show('Payment initialization failed', 'error');
-        this.checkingOut = false;
-          return;
+          if (!clientSecret) {
+            this.toastService.show('Payment initialization failed', 'error');
+            this.checkingOut = false;
+            return;
+          }
+          localStorage.setItem('current_order', JSON.stringify(res.data));
+          // store in stripe service so payment page can use it if router state lost
+          this.stripeService.clientSecret = clientSecret;
+          this.stripeService.orderId = orderId;
+
+          this.checkingOut = false;
+          // navigate to payment page and pass data via router state (optional)
+          this.router.navigate(['/payment'], { state: { client_secret: clientSecret, orderId } });
+        } else if (res.payment_method === 'Paymob') {
+          this.toastService.show('Redirecting to Paymob...', 'success');
+          window.location.href = res.iframe_url;
         }
-        localStorage.setItem('current_order', JSON.stringify(res.data));
-        // store in stripe service so payment page can use it if router state lost
-        this.stripeService.clientSecret = clientSecret;
-        this.stripeService.orderId = orderId;
-
-        // navigate to payment page and pass data via router state (optional)
-        this.router.navigate(['/payment'], { state: { client_secret: clientSecret, orderId } });
+        
       },
       error: err => {
-        this.toastService.show(err.error?.message || 'Order creation failed', 'error');
+        this.toastService.show(err.message || 'Order creation failed', 'error');
         this.checkingOut = false;
       }
     });

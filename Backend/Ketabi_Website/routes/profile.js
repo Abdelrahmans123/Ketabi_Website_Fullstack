@@ -166,7 +166,7 @@ const router = express.Router();
 
 router.get("/me", authenticate, getProfile);
 router.put("/update", authenticate, updateProfile);
-router.get("/library", authenticate,validate(updateProfileSchema), getLibrary);
+router.get("/library", authenticate, getLibrary);
 
 // Wishlist routes
 router.get("/wishlist", authenticate, getWishlist);

@@ -255,7 +255,13 @@ export const downloadBook = asyncHandler(async (req, res, next) => {
     }
     const signedUrl = await generateSignedDownloadUrl(book.pdf.key, 60);
 
-    return res.redirect(signedUrl);
+    return res.json({
+        success: true,
+        data: {
+            url: signedUrl,
+            fileName: book.pdf.fileName || `${book.name}.pdf`
+        }
+    });
 });
 
 export const getBooksByCategory = asyncHandler(async (req, res, next) => {

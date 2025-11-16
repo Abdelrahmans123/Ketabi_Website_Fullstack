@@ -19,7 +19,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2rem;
-  justify-content: center; /* centered instead of flex-start */
+  justify-content: flex-start; /* centered instead of flex-start */
 }
 
 /* Individual cart item (book card) */

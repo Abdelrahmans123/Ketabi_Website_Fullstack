@@ -1,0 +1,87 @@
+<section class="order-success-container">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner">
+      <i class="fa-solid fa-spinner fa-spin fa-3x"></i>
+    </div>
+    <p>Loading your order details...</p>
+  </div>
+
+  <!-- Success State -->
+  <div *ngIf="!loading && orderStatus === 'success'" class="success-card">
+    <div class="success-icon">
+      <i class="fa-solid fa-check-circle"></i>
+    </div>
+
+    <h1>Payment Successful! 🎉</h1>
+    <p class="subtitle">Thank you for your purchase!</p>
+
+    <div class="order-details">
+      <div class="detail-row">
+        <span class="label">Order ID:</span>
+        <span class="value">#{{ orderId }}</span>
+      </div>
+
+      <div class="detail-row">
+        <span class="label">Amount Paid:</span>
+        <span class="value amount">{{ orderAmount | currency:'EGP' }}</span>
+      </div>
+
+      <div class="detail-row" *ngIf="orderDetails">
+        <span class="label">Items:</span>
+        <span class="value">{{ orderDetails.items?.length || 0 }} item(s)</span>
+      </div>
+
+      <div class="detail-row" *ngIf="orderDetails">
+        <span class="label">Status:</span>
+        <span class="value status-badge paid">{{ orderDetails.paymentStatus }}</span>
+      </div>
+    </div>
+
+    <div class="message">
+      <p>A confirmation email has been sent to your email address.</p>
+      <p *ngIf="hasEbooks">
+        📱 Your e-books are now available in your library!
+      </p>
+      <p *ngIf="hasPhysicalBooks">
+        📦 Your physical books will be shipped soon.
+      </p>
+    </div>
+
+    <div class="action-buttons">
+      <button (click)="goToDashboard()" class="btn btn-primary">
+        <i class="fa-solid fa-house"></i> Go to Dashboard
+      </button>
+      <a routerLink="/books/Arabic" class="btn btn-secondary">
+        <i class="fa-solid fa-shopping-bag"></i> Continue Shopping
+      </a>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!loading && orderStatus === 'failed'" class="error-card">
+    <div class="error-icon">
+      <i class="fa-solid fa-times-circle"></i>
+    </div>
+
+    <h1>Payment Failed ❌</h1>
+    <p class="subtitle">Something went wrong with your payment</p>
+
+    <div class="error-message">
+      {{ errorMessage }}
+    </div>
+
+    <div class="order-info" *ngIf="orderId">
+      <p>Order ID: <strong>#{{ orderId }}</strong></p>
+    </div>
+
+    <div class="action-buttons">
+      <button (click)="retryPayment()" class="btn btn-primary">
+        <i class="fa-solid fa-redo"></i> Try Again
+      </button>
+      <a routerLink="/cart" class="btn btn-secondary">
+        <i class="fa-solid fa-shopping-cart"></i> Back to Cart
+      </a>
+    </div>
+  </div>
+</section>
