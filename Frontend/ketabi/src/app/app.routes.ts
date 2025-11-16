@@ -7,11 +7,14 @@ import { ShopComponent } from './features/books/pages/shop/shop';
 import { SearchResultsComponent } from './features/books/pages/search-results/search-results';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/dashboard/user', pathMatch: 'full' },
+  {
+    path: '',
+    redirectTo: 'home',
+    pathMatch: 'full',
+  },
   {
     path: 'books',
     loadChildren: () => import('./features/books/book.routes').then((m) => m.BOOK_ROUTES),
-    canActivate: [AuthGuard],
     title: 'Books',
   },
   {
@@ -26,7 +29,18 @@ export const routes: Routes = [
     title: 'Dashboard',
   },
   {
-    path: 'publisherPublisher',
+    path: 'home',
+    loadChildren: () => import('./features/home/home.routes').then((m) => m.HOME_ROUTES),
+    title: 'Home',
+  },
+  {
+    path: 'wishlist',
+    loadComponent: () =>
+      import('./shared/components/wishlist/wishlist.component').then((m) => m.WishlistComponent),
+    title: 'Wishlist',
+  },
+  {
+    path: 'publisher',
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['publisher'] },
     children: [
@@ -64,8 +78,8 @@ export const routes: Routes = [
   { path: 'cart', component: CartComponent },
   {
     path: 'shop',
-    loadComponent: () =>
-      import('./features/books/pages/shop/shop').then((m) => m.ShopComponent),
+    loadComponent: () => import('./features/books/pages/shop/shop').then((m) => m.ShopComponent),
+    title: 'Shop',
   },
   { path: 'search', component: SearchResultsComponent },
   {

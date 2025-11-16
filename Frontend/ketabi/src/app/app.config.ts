@@ -4,7 +4,12 @@ import {
   provideZoneChangeDetection,
   importProvidersFrom,
 } from '@angular/core';
-import { InMemoryScrollingOptions, provideRouter, withViewTransitions, withInMemoryScrolling } from '@angular/router';
+import {
+  InMemoryScrollingOptions,
+  provideRouter,
+  withViewTransitions,
+  withInMemoryScrolling,
+} from '@angular/router';
 
 import { routes } from './app.routes';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
@@ -15,12 +20,13 @@ import {
 } from '@abacritt/angularx-social-login';
 import { environment } from '../environments/environment';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
+import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideHttpClient(withFetch(), withInterceptors([jwtInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([jwtInterceptor, AuthInterceptor])),
     importProvidersFrom(SocialLoginModule),
     {
       provide: 'SocialAuthServiceConfig',
