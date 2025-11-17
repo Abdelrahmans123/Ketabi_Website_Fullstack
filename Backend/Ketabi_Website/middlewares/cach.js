@@ -3,7 +3,8 @@ import { buildCacheKey } from "../utils/cacheKeyBuilder.js";
 
 export const cacheMiddleware = (prefix, { ttl = 300, skipParams = [] } = {}) => async (req, res, next) => {
   try {
-    const query = { ...req.query };
+    // Include both query params and route params in cache key
+    const query = { ...req.query, ...req.params };
     skipParams.forEach(p => delete query[p]);
     const cacheKey = buildCacheKey(prefix, query);
 

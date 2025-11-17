@@ -94,6 +94,13 @@ export const routes: Routes = [
     loadComponent: () => import('./shared/components/my-orders/my-orders').then((m) => m.MyOrdersComponent),
     canActivate: [AuthGuard]
   },
+  {
+    path: 'profile',
+    loadComponent: () =>
+      import('./shared/components/profile/profile.component').then((m) => m.ProfileComponent),
+    canActivate: [AuthGuard],
+    title: 'My Profile',
+  },
   { path: 'search', component: SearchResultsComponent },
   {
     path: '**',
