@@ -166,6 +166,7 @@ router.put(
     authenticate,
     authorize(roleEnum.admin, roleEnum.publisher),
     paramValidate(idParameterValidate),
+    upload.single("pdf"),
     validate(updateSchema),
     updateBook
 );

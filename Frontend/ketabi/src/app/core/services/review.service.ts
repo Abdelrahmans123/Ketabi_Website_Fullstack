@@ -9,12 +9,12 @@ import { Review, ReviewResponse, CreateReviewRequest, UpdateReviewRequest } from
 })
 export class ReviewService {
     private apiUrl = API_ENDPOINTS.reviews;
-    
+
 
     constructor(
         private http: HttpClient) { }
 
-   
+
 
     getReviewsByBook(bookId: string, page: number = 1, limit: number = 10, sort: 'top' | 'new' = 'new'): Observable<ReviewResponse> {
         const params: any = { page, limit, sort };
@@ -23,7 +23,7 @@ export class ReviewService {
 
     createReview(data: CreateReviewRequest): Observable<ReviewResponse> {
         console.log('Creating review:', data);
-        return this.http.post<ReviewResponse>(`${this.apiUrl}/Create-Review`, data);
+        return this.http.post<ReviewResponse>(`${this.apiUrl}`, data);
     }
 
     updateReview(id: string, data: UpdateReviewRequest): Observable<ReviewResponse> {

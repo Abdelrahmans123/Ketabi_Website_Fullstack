@@ -44,7 +44,12 @@ export const getPublishedBooks = asyncHandler(async (req, res, next) => {
 
     if (!publisher) throw new AppError("Publisher not found", 404);
 
-    const totalBooks = publisher.booksPublished.length;
+    // First, get the actual count of existing books
+    const existingBooksCount = await Book.countDocuments({
+        _id: { $in: publisher.booksPublished }
+    });
+
+    const totalBooks = existingBooksCount;
     const totalPages = totalBooks === 0 ? 0 : Math.ceil(totalBooks / limit);
 
     if (totalPages > 0) {
@@ -59,7 +64,8 @@ export const getPublishedBooks = asyncHandler(async (req, res, next) => {
         model: Book,
         filter: { _id: { $in: publisher.booksPublished } },
         skip,
-        limit
+        limit,
+        populate: "genre"
     });
 
     return successResponse({
