@@ -73,7 +73,6 @@ const Counter = mongoose.model('Counter', counterSchema);
 
 // Pre-save hooks
 orderSchema.pre('save', async function (next) {
-    console.log('order number: ', this.orderNumber);
     // Generate order number
     if (!this.orderNumber || this.orderNumber === '') {
         try {

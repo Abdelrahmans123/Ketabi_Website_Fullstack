@@ -39,6 +39,11 @@ export const routes: Routes = [
     title: 'Wishlist',
   },
   {
+    path: 'order-success',
+    loadComponent: () => 
+      import('./features/order/order.component').then((m) => m.OrderComponent),
+  },
+  {
     path: 'publisher',
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['publisher'] },

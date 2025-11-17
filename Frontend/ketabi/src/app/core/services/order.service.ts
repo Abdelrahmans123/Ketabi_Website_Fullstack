@@ -30,13 +30,13 @@ export class OrderService {
     });
   }
 
-  getOrderHistory(page: number = 1, limit:number=10): Observable<any> {
+  getOrderHistory(page: number = 1, limit: number = 10): Observable<any> {
     return this.http.get(`${this.base_url}/order-history`);
   }
 
   getOrderDetails(orderId: string): Observable<any> {
-    console.log('Fetching order details:', orderId);
-    return this.http.get(`${this.base_url}/${orderId}`);
+    console.log('info: ',`${this.base_url}/order/${orderId}`);
+    return this.http.get(`${this.base_url}/order/${orderId}`);
   }
 
   // GET ALL ORDERS (Admin)
