@@ -1,9 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { ChatbotService } from '../../../core/services/chatbot.service';
+import { CartService } from '../../../core/services/cart.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { ChatbotResponse } from '../../../core/models/chatbot.model';
-import { Router } from '@angular/router';
 
 interface ChatMessage {
   id: string;
@@ -16,7 +18,7 @@ interface ChatMessage {
 @Component({
   selector: 'app-chatbot-widget',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './chatbot-widget.component.html',
   styleUrl: './chatbot-widget.component.css'
 })
@@ -28,10 +30,13 @@ export class ChatbotWidgetComponent implements OnInit {
   hasError = false;
   errorMessage = '';
 
-  constructor(private chatbotService: ChatbotService, private router:Router) {}
+  constructor(
+    private chatbotService: ChatbotService,
+    private cartService: CartService,
+    private toast: ToastService
+  ) {}
 
   ngOnInit(): void {
-
     this.messages.push({
       id: '1',
       type: 'bot',
@@ -51,7 +56,6 @@ export class ChatbotWidgetComponent implements OnInit {
   sendMessage(): void {
     if (!this.userInput.trim()) return;
 
-
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
@@ -59,7 +63,6 @@ export class ChatbotWidgetComponent implements OnInit {
       timestamp: new Date()
     };
     this.messages.push(userMessage);
-
 
     const query = this.userInput;
     this.userInput = '';
@@ -91,13 +94,25 @@ export class ChatbotWidgetComponent implements OnInit {
     });
   }
 
+  addToCart(event: Event, book: any): void {
+    event.stopPropagation(); 
+
+    if (book.status !== 'in stock') {
+      this.toast.show('Book is out of stock', 'error');
+      return;
+    }
+
+    this.cartService.addItem(book, 1, 'physical');
+    this.toast.show('Added to cart!', 'success');
+  }
+
   private showError(message: string): void {
     this.hasError = true;
     this.errorMessage = message;
     const errorMessage: ChatMessage = {
       id: (Date.now() + 2).toString(),
       type: 'bot',
-      message: `❌ ${message}`,
+      message: ` ${message}`,
       timestamp: new Date()
     };
     this.messages.push(errorMessage);
@@ -110,11 +125,5 @@ export class ChatbotWidgetComponent implements OnInit {
       message: '👋 Hello! I\'m your AI book assistant. How can I help you find the perfect book today?',
       timestamp: new Date()
     }];
-  }
-
-  goToBookDetails(book:any){
-    const id = book._id;
-    this.clearChat();
-    this.router.navigate(['/books', id]);
   }
 }

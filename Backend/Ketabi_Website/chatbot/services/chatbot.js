@@ -1,6 +1,6 @@
 import genAI from '../config/gemini.js';
 import { searchBooks } from './vectorSearch.js';
-import { detectLanguage } from './embeddings.js';
+import { detectLanguage, extractPriceRange } from './embeddings.js';
 import { getFromCache, saveToCache } from './cache.js';
 
 const TIMEOUT_MS = 10000;
@@ -113,7 +113,6 @@ export const generateChatResponse = async (db, userQuery, options = {}) => {
 
     console.log(` Found ${relevantBooks.length} books (showing ${Math.min(relevantBooks.length, limit)})${isEmptySearch ? ' [SUGGESTIONS]' : ''}`);
 
-
     const context = relevantBooks
       .slice(0, limit)
       .map(
@@ -124,7 +123,6 @@ export const generateChatResponse = async (db, userQuery, options = {}) => {
       )
       .join('\n');
 
- 
     let systemPrompt;
     if (isEmptySearch) {
       systemPrompt =
@@ -188,7 +186,6 @@ export const generateChatResponse = async (db, userQuery, options = {}) => {
       },
     };
 
-   
     await saveToCache('aiResponse', cacheKey, result);
     console.log(` Full response cached (${limit} books${isEmptySearch ? ' [SUGGESTIONS]' : ''})`);
 
