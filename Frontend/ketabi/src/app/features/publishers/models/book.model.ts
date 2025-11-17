@@ -12,7 +12,7 @@ export interface PublisherBook {
     cost: number;
     stock?: number;
     noOfPages: number;
-    image: { url: string };
+    image?: { url?: string };
     status: 'in stock' | 'out of stock' | 'removed';
     pdf?: {
         key: string;
@@ -47,6 +47,7 @@ export interface UpdateBookRequest {
     name?: string;
     author?: string;
     description?: string;
+    imageUrl?: string;
     Edition?: string;
     recommendedAge?: 'kids' | 'adults' | 'all';
     bookLanguage?: 'english' | 'arabic';

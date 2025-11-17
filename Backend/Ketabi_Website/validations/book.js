@@ -69,7 +69,10 @@ export const createSchema = Joi.object({
         .messages({
             'any.only': 'Recommended age must be one of the allowed values: kids, adults, or all.',
             'string.base': 'Recommended age must be a string.'
-        })
+        }),
+    imageUrl: Joi.string().uri().optional().messages({
+        "string.uri": "Image must be a valid URL",
+    }),
 });
 
 export const getBookByIdSchema = Joi.object({
@@ -146,5 +149,8 @@ export const updateSchema = Joi.object({
     }),
     status: Joi.string().valid("in stock", "out of stock").optional().messages({
         "any.only": "Status must be either 'in stock' or 'out of stock'",
+    }),
+    imageUrl: Joi.string().uri().optional().messages({
+        "string.uri": "Image must be a valid URL",
     }),
 });
