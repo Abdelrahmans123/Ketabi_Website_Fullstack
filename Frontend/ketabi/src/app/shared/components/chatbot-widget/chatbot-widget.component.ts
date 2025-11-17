@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatbotService } from '../../../core/services/chatbot.service';
 import { ChatbotResponse } from '../../../core/models/chatbot.model';
+import { Router } from '@angular/router';
 
 interface ChatMessage {
   id: string;
@@ -27,7 +28,7 @@ export class ChatbotWidgetComponent implements OnInit {
   hasError = false;
   errorMessage = '';
 
-  constructor(private chatbotService: ChatbotService) {}
+  constructor(private chatbotService: ChatbotService, private router:Router) {}
 
   ngOnInit(): void {
 
@@ -109,5 +110,11 @@ export class ChatbotWidgetComponent implements OnInit {
       message: '👋 Hello! I\'m your AI book assistant. How can I help you find the perfect book today?',
       timestamp: new Date()
     }];
+  }
+
+  goToBookDetails(book:any){
+    const id = book._id;
+    this.clearChat();
+    this.router.navigate(['/books', id]);
   }
 }

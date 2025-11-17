@@ -63,7 +63,7 @@ export class CartService {
         this.mergeLocalStorageAndBackendCart(cartFromBackEnd);
       },
       error: (err) => {
-        this.toast.show(`Couldn't load cart from server: ${err.error?.message}`, 'error');
+        this.toast.show(`Couldn't load cart from server: ${err.error?.message || err.error}`, 'error');
         this.loadCartFromLocalStorage();
       }
     });

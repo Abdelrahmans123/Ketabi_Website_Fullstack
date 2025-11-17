@@ -71,6 +71,7 @@ export class Payment implements OnInit, OnDestroy {
       if (result.error) {
         this.errorMessage = result.error.message || 'Payment failed';
         this.toast.show(this.errorMessage, 'error');
+        this.router.navigate(['/my-orders']);
         this.processing = false;
         return;
       }
@@ -79,18 +80,17 @@ export class Payment implements OnInit, OnDestroy {
       if (intent && intent.status === 'succeeded') {
         // Frontend-level success:
         this.toast.show('Payment succeeded', 'success');
-
         // Clear cart locally (optional — webhook will be source of truth)
         this.cartService.clearCart();
-
-        // Navigate to orders/history
-        this.router.navigate(['/orders'], { state: { paid: true, orderId: this.orderId } });
+        this.router.navigate([`/order-success/${this.orderId}`]);
       } else {
         this.toast.show('Payment processing, you will receive a confirmation shortly', 'info');
-        this.router.navigate(['/orders']);
+        this.router.navigate([`/order-success/${this.orderId}`]);
       }
     } catch (err: any) {
       this.toast.show(err.message || 'Payment error', 'error');
+      this.processing = false;
+      this.router.navigate([`/order-success/${this.orderId}`]);
     } finally {
       this.processing = false;
     }

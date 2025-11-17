@@ -9,53 +9,49 @@ import Coupon from '../models/Coupon.js';
 import AppError from '../utils/AppError.js';
 import Sale from '../models/Sale.js';
 import PublisherOrder from '../models/publisherOrder.js';
+import { notifyOrderCancelled, notifyGiftReceived, notifyOrderConfirmed, notifyOrderDelivered, notifyOrderProcessing, notifyOrderShipped, notifyPaymentFailed, notifyPaymentRefunded, notifyPaymentSuccess } from "../services/OrderNotification.js";
+import mongoose from "mongoose";
 
 const processedWebhooks = new Set();
 
 export const handlePaymobCallback = async (req, res) => {
+    const session = await mongoose.startSession();
     try {
         // Extract callback data
         let callbackData;
         const receivedHmac = req.query.hmac || req.body?.hmac;
 
-        // ✅ FIX: GET requests من الـ redirect بتاع Paymob - خليها simple
         if (req.method === 'GET') {
-            // GET request من Paymob redirect - خذ الـ orderId من query
             const merchantOrderId = req.query.merchant_order_id;
             if (merchantOrderId) {
                 // GET Request - Redirecting from Paymob
                 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-                const redirectUrl = `${frontendUrl}/order-success?orderId=${merchantOrderId}&status=success`;
+                const redirectUrl = `${frontendUrl}/order-success/${merchantOrderId}`;
                 return res.redirect(302, redirectUrl);
             }
             return res.status(200).json({ message: 'OK' });
         }
 
-        // ✅ فقط POST requests لها verification
         if (req.method !== 'POST') {
             return res.status(200).json({ message: 'OK' });
         }
 
         if (!req.body?.obj) {
-            console.error('❌ Missing POST body');
+            console.error('Missing POST body');
             return res.status(400).json({ error: 'Invalid POST data' });
         }
 
         callbackData = req.body.obj;
 
         if (!receivedHmac || !callbackData) {
-            // Missing HMAC or callback data
             return res.status(400).json({ error: 'Invalid callback data' });
         }
 
         // Verify HMAC
         const isValidHmac = verifyPaymobHMAC(callbackData, receivedHmac);
         if (!isValidHmac) {
-            // Invalid HMAC signature
             return res.status(401).json({ error: 'Invalid HMAC signature' });
         }
-
-        // HMAC verified successfully
 
         // Get merchant order ID
         const merchantOrderId = callbackData.order?.merchant_order_id;
@@ -66,7 +62,6 @@ export const handlePaymobCallback = async (req, res) => {
         const isPending = callbackData.pending === false;
 
         if (!merchantOrderId) {
-            // Merchant Order ID is missing!
             return res.status(400).json({ error: 'Merchant Order ID missing' });
         }
 
@@ -82,7 +77,7 @@ export const handlePaymobCallback = async (req, res) => {
         // Find order
         const order = await Order.findOne({ orderNumber: merchantOrderId });
         if (!order) {
-            console.error('❌ Order not found:', merchantOrderId);
+            console.error('Order not found:', merchantOrderId);
             return res.status(404).json({ error: 'Order not found' });
         }
 
@@ -99,9 +94,12 @@ export const handlePaymobCallback = async (req, res) => {
         if (!order.transactionId) {
             order.transactionId = transactionId.toString();
         }
+        let isShippingNeeded = false;
 
-        // ✅ HANDLE PAYMENT SUCCESS
+        // HANDLE PAYMENT SUCCESS
         if (transactionSuccess && isPending) {
+            notifyPaymentSuccess(order);
+            notifyOrderProcessing(order);
             // Processing successful payment
 
             // Update order status
@@ -111,6 +109,7 @@ export const handlePaymobCallback = async (req, res) => {
             // Update item payment statuses
             order.items.forEach(item => {
                 item.paymentStatus = paymentStatus.COMPLETED;
+                if(item.type === itemType.PHYSICAL) isShippingNeeded = true;
             });
 
             // Handle ebook delivery
@@ -118,6 +117,10 @@ export const handlePaymobCallback = async (req, res) => {
             if (ebooksInOrder.length > 0) {
                 // Processing ebooks
                 const recipientEmail = order.isGift ? order.recipientEmail : order.userEmail;
+                if (order.isGift) {
+                    const giftUser = findOne({ model: User, query: { email: order.recipientEmail } });
+                    notifyGiftReceived(giftUser._id, order);
+                }
                 const recipient = await User.findOne({ email: recipientEmail });
 
                 if (recipient) {
@@ -217,7 +220,7 @@ export const handlePaymobCallback = async (req, res) => {
                             finalPrice: (saleItems.reduce((sum, i) => sum + i.total, 0)) * (1 - (order.discountApplied || 0) / 100),
                             coupon: order.coupon || "No Coupon",
                             couponDiscount: order.discountApplied || 0,
-                            paymentIntentId: paymentIntent.id,
+                            paymentIntentId: order.transactionId,
                             paymentMethod: order.paymentMethod
                         },
                     ],
@@ -225,8 +228,7 @@ export const handlePaymobCallback = async (req, res) => {
                 );
             }
 
-
-
+            console.log('order email: ', order.userEmail);
             // Send success email
             await sendEmail({
                 to: order.userEmail,
@@ -251,6 +253,7 @@ export const handlePaymobCallback = async (req, res) => {
             // Payment failed
             order.paymentStatus = paymentStatus.FAILED;
             order.orderStatus = orderStatus.CANCELLED;
+            notifyOrderCancelled(order, 'Payment Failed or Canceled')
 
             // Restore stock
             for (const item of order.items) {
@@ -281,6 +284,8 @@ export const handlePaymobCallback = async (req, res) => {
         console.error('❌ WEBHOOK ERROR:', error.message);
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        await session.endSession();
     }
 };
 

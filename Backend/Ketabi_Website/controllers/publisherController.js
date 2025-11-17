@@ -9,6 +9,7 @@ import { Order } from "../models/Order.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { findAll, findById } from "../models/services/db.js";
 import mongoose from "mongoose";
+import { notifyOrderCancelled, notifyGiftReceived, notifyOrderConfirmed, notifyOrderDelivered, notifyOrderProcessing, notifyOrderShipped, notifyPaymentFailed, notifyPaymentRefunded, notifyPaymentSuccess } from "../services/OrderNotification.js";
 
 export const createPublisher = asyncHandler(async (req, res, next) => {
     const { publisherId } = req.body;
@@ -202,6 +203,7 @@ export const updatePublisherOrder = asyncHandler(async (req, res, next) => {
 
         const book = await Book.findById(bookId).session(session);
 
+        handleNotificationUpdates(mainOrder, paymentStatus, deliveryStatus)
 
         let textUpdate = "";
         let htmlUpdate = "";
@@ -298,3 +300,56 @@ export const updatePublisherOrder = asyncHandler(async (req, res, next) => {
         return next(error);
     }
 });
+
+
+function handleNotificationUpdates(order, paymentStatus, deliveryStatus) {
+    const d = deliveryStatus;
+    const p = paymentStatus;
+    // -------------------------------
+    // PAYMENT STATUS HANDLING
+    // -------------------------------
+    switch (p) {
+        case paymentStatus.COMPLETED:
+            notifyPaymentSuccess(order);
+            break;
+
+        case paymentStatus.FAILED:
+            notifyPaymentFailed(order);
+            break;
+
+        case paymentStatus.REFUNDED:
+            notifyPaymentRefunded(order);
+            break;
+
+        case paymentStatus.EXPIRED:
+            notifyOrderCancelled(order);
+            break;
+    }
+
+    // -------------------------------
+    // DELIVERY STATUS HANDLING
+    // -------------------------------
+    switch (d) {
+        case deliveryStatus.PENDING:
+            break;
+
+        case deliveryStatus.PROCESSING:
+            notifyOrderProcessing(order);
+            break;
+
+        case deliveryStatus.SHIPPED:
+            notifyOrderShipped(order);
+            break;
+
+        case deliveryStatus.IN_TRANSIT:
+            notifyOrderShipped(order); // same notification for “moving”
+            break;
+
+        case deliveryStatus.DELIVERED:
+            notifyOrderDelivered(order);
+
+        case deliveryStatus.RETURNED:
+            notifyOrderCancelled(order);
+            break;
+    }
+}

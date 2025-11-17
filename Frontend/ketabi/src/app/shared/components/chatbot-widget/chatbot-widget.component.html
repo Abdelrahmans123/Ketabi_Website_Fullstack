@@ -32,8 +32,8 @@
 
           <!-- Books Display -->
           <div *ngIf="msg.books && msg.books.length > 0" class="books-container">
-            <div *ngFor="let book of msg.books.slice(0, 3)" class="book-item">
-              <img [src]="book.image?.url" [alt]="book.name" class="book-cover">
+            <div *ngFor="let book of msg.books.slice(0, 3)" class="book-item" (click)="goToBookDetails(book)">
+              <img [src]="book.image?.url || 'default-book.jpg'" [alt]="book.name" class="book-cover">
               <div class="book-info">
                 <h5>{{ book.name }}</h5>
                 <p class="author">by {{ book.author }}</p>

@@ -17,6 +17,7 @@ import User from "../models/User.js";
 import Cart from "../models/Cart.js";
 import { successResponse } from "../utils/successResponse.js";
 import { processPaymobPayment } from "../config/paymobPayment.js";
+import { notifyOrderCancelled, notifyGiftReceived, notifyOrderConfirmed, notifyOrderDelivered, notifyOrderProcessing, notifyOrderShipped, notifyPaymentFailed, notifyPaymentRefunded, notifyPaymentSuccess } from "../services/OrderNotification.js";
 // items (book, quantity, type), shipping address, paymentMethod, isGift, receipient email, personalizedMessage, coupon
 
 async function getCouponData(couponName) {
@@ -207,7 +208,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     await order.save({ session });
     await session.commitTransaction();
     session.endSession();
-
+    notifyOrderConfirmed(order);
     let payment;
 
     try {
@@ -227,7 +228,6 @@ export const createOrder = asyncHandler(async (req, res, next) => {
             order.transactionId = payment.id;
             await order.save();
 
-            // ✅ response واحدة فقط
             return res.status(201).json({
                 message: 'Order created, awaiting payment confirmation',
                 data: order,
@@ -236,6 +236,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
                 payment_method: 'Paymob'
             });
         } else {
+            notifyPaymentFailed(order, 'Invalid payment method');
             return next(new AppError('Invalid payment method', 400));
         }
 
@@ -250,6 +251,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
         }
         order.paymentStatus = paymentStatus.FAILED;
         await order.save();
+        notifyPaymentFailed(order, 'Payment failed')
         return next(
             new AppError(
                 `Payment failed. Try again. ${error}`, 502
@@ -366,3 +368,20 @@ export const getOrderHistory = asyncHandler(async (req, res, next) => {
         return next(new AppError('Failed to fetch orders: ' + error.message, 500));
     }
 });
+
+export const getSingleOrder = asyncHandler(async (req, res, next) => {
+    const userId = req.user.id;
+    const { orderId } = req.params;
+
+    const order = await Order.findOne({ orderNumber: orderId, user: userId });
+
+    if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+    }
+    
+    return successResponse ({
+        res,
+        statusCode: 200,
+        data: order
+    });
+})

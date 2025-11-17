@@ -16,6 +16,7 @@ const notificationSchema = new mongoose.Schema(
                 "ORDER_SHIPPED",
                 "ORDER_DELIVERED",
                 "ORDER_CANCELLED",
+                'ORDER_PROCESSING',
                 "CART_REMINDER",
                 "WISHLIST_PRICE_DROP",
                 "NEW_BOOK_RELEASE",
@@ -27,6 +28,9 @@ const notificationSchema = new mongoose.Schema(
                 "PRICE_DROP",
                 "NEW_EDITION",
                 "LOW_STOCK",
+                'PAYMENT_SUCCESS',
+                'PAYMENT_FAILED',
+                'PAYMENT_REFUNDED'
             ],
             index: true,
         },

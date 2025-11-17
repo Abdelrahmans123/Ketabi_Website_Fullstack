@@ -44,14 +44,9 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    console.log('🔄 MyOrdersComponent initialized');
-
     // Check authentication first
     const isAuthenticated = this.authService.isAuthenticated();
     const currentUser = this.authService.getCurrentUser();
-
-    console.log('🔐 Is Authenticated:', isAuthenticated);
-    console.log('👤 Current User:', currentUser);
 
     if (!isAuthenticated) {
       this.error = '❌ Please login to view your orders';
@@ -70,20 +65,14 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.error = null;
 
-    console.log('Loading orders - Page:', this.currentPage, 'Limit:', this.limit);
-
     this.orderService.getOrderHistory(this.currentPage, this.limit)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Orders loaded successfully:', response);
-
           this.orders = response.data?.orders || [];
           this.totalOrders = response.data?.pagination?.total || 0;
           this.totalPages = response.data?.pagination?.pages || 1;
           this.isLoading = false;
-
-          console.log(`Loaded ${this.orders.length} orders`);
         },
         error: (error) => {
           console.error('Error loading orders:', error);
