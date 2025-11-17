@@ -608,7 +608,6 @@ export const searchBooks = asyncHandler(async (req, res, next) => {
     const [result] = await Book.aggregate(pipeline);
     const queryTime = Date.now() - startTime;
     const total = result.metadata[0]?.total || 0;
-    console.log(result.data)
     return successResponse({
         res,
         statusCode: 200,
