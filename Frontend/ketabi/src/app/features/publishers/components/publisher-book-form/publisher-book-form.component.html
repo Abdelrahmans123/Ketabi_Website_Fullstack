@@ -1,6 +1,6 @@
 <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
   <div class="form-grid">
-    <div class="form-group">
+    <div class="form-group full-width">
       <label for="name">Title *</label>
       <input id="name" type="text" formControlName="name"
         [class.invalid]="getControl('name')?.invalid && (getControl('name')?.touched || getControl('name')?.dirty)">
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="form-group full-width">
       <label for="author">Author *</label>
       <input id="author" type="text" formControlName="author"
         [class.invalid]="getControl('author')?.invalid && (getControl('author')?.touched || getControl('author')?.dirty)">
@@ -24,7 +24,7 @@
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="form-group full-width">
       <label for="edition">Edition *</label>
       <input id="edition" type="text" formControlName="Edition"
         [class.invalid]="getControl('Edition')?.invalid && (getControl('Edition')?.touched || getControl('Edition')?.dirty)">
@@ -137,6 +137,22 @@
       <div class="error"
         *ngIf="getControl('description')?.errors && (getControl('description')?.touched || getControl('description')?.dirty)">
         <span *ngIf="getControl('description')?.errors?.['maxlength']">Description cannot exceed 1000 characters.</span>
+      </div>
+    </div>
+
+    <div class="form-group full-width">
+      <label for="imageUrl">Cover Image URL</label>
+      <input id="imageUrl" type="url" placeholder="https://example.com/cover.jpg" formControlName="imageUrl"
+        [class.invalid]="getControl('imageUrl')?.invalid && (getControl('imageUrl')?.touched || getControl('imageUrl')?.dirty)">
+      <div class="error"
+        *ngIf="getControl('imageUrl')?.errors && (getControl('imageUrl')?.touched || getControl('imageUrl')?.dirty)">
+        <span *ngIf="getControl('imageUrl')?.errors?.['pattern']">
+          Please enter a valid URL that starts with http:// or https://
+        </span>
+      </div>
+      <div class="image-preview" *ngIf="form.get('imageUrl')?.value">
+        <span>Preview:</span>
+        <img [src]="form.get('imageUrl')?.value" alt="Book cover preview" />
       </div>
     </div>
 

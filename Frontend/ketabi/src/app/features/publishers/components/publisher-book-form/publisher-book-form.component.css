@@ -69,6 +69,20 @@ textarea {
   font-size: 0.85rem;
 }
 
+.image-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.image-preview img {
+  width: 180px;
+  max-width: 100%;
+  border-radius: 8px;
+  border: 2px solid #daa520;
+  object-fit: cover;
+}
+
 .form-errors {
   margin-top: 1rem;
   padding: 0.75rem 1rem;

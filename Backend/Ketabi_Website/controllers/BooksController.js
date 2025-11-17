@@ -43,6 +43,11 @@ export const AddBook = asyncHandler(async (req, res, next) => {
     req.body.genre = genre._id;
     delete req.body.genre_id;
 
+    if (req.body.imageUrl) {
+        req.body.image = { url: req.body.imageUrl };
+        delete req.body.imageUrl;
+    }
+
     const duplicateBook = await Book.findOne({
         publisher: publisherId,
         name: req.body.name,
@@ -142,8 +147,13 @@ export const updateBook = asyncHandler(async (req, res, next) => {
         }
     }
 
-    
+
     const updateData = { ...req.body };
+
+    if (updateData.imageUrl) {
+        updateData.image = { url: updateData.imageUrl };
+        delete updateData.imageUrl;
+    }
 
     if (updateData.price !== undefined) {
         updateData.price = typeof updateData.price === 'string' ? parseFloat(updateData.price) : updateData.price;
@@ -161,18 +171,18 @@ export const updateBook = asyncHandler(async (req, res, next) => {
         updateData.noOfPages = typeof updateData.noOfPages === 'string' ? parseInt(updateData.noOfPages, 10) : updateData.noOfPages;
     }
 
-  
+
     if (updateData.price !== undefined && updateData.cost !== undefined) {
         if (updateData.price <= updateData.cost) {
             return next(new AppError("Price must be greater than cost", 400));
         }
     } else if (updateData.price !== undefined) {
-        
+
         if (updateData.price <= oldBook.cost) {
             return next(new AppError("Price must be greater than cost", 400));
         }
     } else if (updateData.cost !== undefined) {
-        
+
         if (oldBook.price <= updateData.cost) {
             return next(new AppError("Price must be greater than cost", 400));
         }
@@ -192,7 +202,7 @@ export const updateBook = asyncHandler(async (req, res, next) => {
         delete updateData.genre_id;
     }
 
-//    pdf ----------  upload 
+    //    pdf ----------  upload 
     if (req.file) {
         const file = req.file;
         const result = await uploadBufferToS3(
