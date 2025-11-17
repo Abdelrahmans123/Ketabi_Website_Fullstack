@@ -26,7 +26,7 @@ export class OrderComponent implements OnInit {
     private orderService: OrderService,
     private toastService: ToastService,
     private cartService: CartService
-  ) {}
+  ) { }
 
   ngOnInit() {
     // 1Read "/order/:orderId"
@@ -51,8 +51,10 @@ export class OrderComponent implements OnInit {
 
         this.loading = false;
 
-        // 3️⃣ Decide the page UI automatically based on backend
         this.evaluateOrderStatus();
+        if (this.order.paymentStatus === 'Pending') {
+          setTimeout(() => this.loadOrder(), 3000);
+        }
       },
       error: () => {
         this.toastService.show("Order not found", "error");
