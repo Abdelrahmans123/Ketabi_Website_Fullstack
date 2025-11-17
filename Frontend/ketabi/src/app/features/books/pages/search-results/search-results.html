@@ -32,7 +32,7 @@
         <!-- Results Grid -->
         <div class="row g-4" *ngIf="!loading && !error && books.length > 0">
           <div class="col-lg-3 col-md-4 col-sm-6" *ngFor="let book of books">
-            <app-book-card  [book]="book" [image]="book.image?.url || 'assets/images/book-placeholder.png'" [title]="book.name"
+            <app-book-card  [book]="book" [image]="book.image?.url || 'default-book.jpg'" [title]="book.name" [id]="book._id"
               [author]="book.author" [price]="book.finalPrice || book.price" [rating]="book.avgRating"></app-book-card>
           </div>
         </div>

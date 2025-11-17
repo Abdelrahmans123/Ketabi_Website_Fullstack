@@ -2,7 +2,7 @@
   <div class="book-card h-100">
     <!-- Book Image Container -->
     <div class="book-image-wrapper">
-      <img [src]="image || 'assets/default-book.jpg'" [alt]="title" class="card-img-top" />
+      <img [src]="image || 'default-book.jpg'" [alt]="title" class="card-img-top" />
       
       <!-- Discount Badge -->
       <div class="card-discount-badge" *ngIf="book?.discount && (book?.discount || 0) > 0">
