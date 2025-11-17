@@ -1,16 +1,22 @@
 export interface Book {
-  data: Book | undefined;
   _id: string;
   name: string;
   author: string;
-  category: string;
+  category?: string;
   price: number;
-  discount: number;
+  discount?: number;
   image: { url: string };
   description: string;
-  stock: number;
+  stock?: number;
   status: string;
-  genre?: { name: string };
+  genre?: { name: string; _id?: string };
+  avgRating?: number;
+  ratingsCount?: number;
+  bookLanguage?: 'english' | 'arabic';
+  recommendedAge?: 'kids' | 'adults' | 'all';
+  Edition?: string;
+  noOfPages?: number;
+  finalPrice?: number;
 }
 export interface BookResponse {
   status: string;

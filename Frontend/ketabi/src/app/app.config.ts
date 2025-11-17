@@ -9,6 +9,7 @@ import {
   provideRouter,
   withViewTransitions,
   withInMemoryScrolling,
+  RouteReuseStrategy,
 } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -21,6 +22,7 @@ import {
 import { environment } from '../environments/environment';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
+import { CustomRouteReuseStrategy } from './core/strategies/custom-route-reuse-strategy';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -64,5 +66,9 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'enabled',
       })
     ),
+    {
+      provide: RouteReuseStrategy,
+      useClass: CustomRouteReuseStrategy,
+    },
   ],
 };
