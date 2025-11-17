@@ -202,7 +202,6 @@ export class CartComponent implements OnInit {
         
       },
       error: err => {
-        console.log(err)
         this.toastService.show(err.error.message || 'Order creation failed', 'error');
         this.checkingOut = false;
       }

@@ -41,7 +41,6 @@ export class CartService {
       .subscribe((isLogOut) => {
         if (isLogOut) {
           this.clearCart();
-          console.log('hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh');
           this.loadCart();
         }
       })
