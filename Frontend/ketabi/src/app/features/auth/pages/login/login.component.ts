@@ -236,7 +236,7 @@ export class LoginPageComponent implements OnDestroy {
 
     switch (status) {
       case 401:
-        this.errorMessage = 'Invalid email or password';
+        this.errorMessage = 'Invalid Credentials. Please try again.';
         break;
       case 403:
         this.errorMessage = 'Account is locked. Please contact support.';

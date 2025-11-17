@@ -25,7 +25,13 @@ interface ChatMessage {
 })
 export class ChatComponent implements OnInit, OnDestroy {
   @ViewChild('messageContainer') private messageContainer!: ElementRef;
-
+  private _cachedConversations: Array<{
+    userId: string;
+    name: string;
+    unread: number;
+    online: boolean;
+  }> = [];
+  private _conversationsNeedUpdate = true;
   isChatOpen: boolean = false;
   messages: ChatMessage[] = [];
   messageInput: string = '';
@@ -118,12 +124,7 @@ export class ChatComponent implements OnInit, OnDestroy {
       this.socketService.messages$.subscribe((message) => {
         this.userId = message.from;
         console.log('Received new message:', message);
-        console.log('Current conversation:', {
-          currentUserId: this.currentUserId,
-          recipientId: this.recipientId,
-          messageFrom: message.from,
-          messageTo: message.sendTo,
-        });
+
         // Admin: handle multi-conversations
         if (this.currentUserRole === 'admin' && message.sendTo === this.currentUserId) {
           const fromUser = message.from;
@@ -137,21 +138,18 @@ export class ChatComponent implements OnInit, OnDestroy {
             isOwn: false,
           });
 
-          // Auto-select if no active conversation
           if (!this.recipientId) {
             this.selectConversation(fromUser);
           }
 
-          // If message is for active conversation, reflect in visible messages
           if (this.recipientId === fromUser) {
             this.addMessage(conv[conv.length - 1]);
           } else {
-            // Increment per-user unread
             const prev = this.unreadByUser.get(fromUser) || 0;
             this.unreadByUser.set(fromUser, prev + 1);
+            this.markConversationsStale(); // ADD THIS
           }
 
-          // Increment global unread if chat window closed
           if (!this.isChatOpen) {
             this.unreadCount++;
           }
@@ -209,16 +207,13 @@ export class ChatComponent implements OnInit, OnDestroy {
     // Subscribe to user status
     this.subscriptions.push(
       this.socketService.userStatus$.subscribe((status) => {
-        // Do NOT overwrite the current user's id/name here - we get that from authService
-        // server emits `userStatus` for the connecting socket and `userStatusChanged` for others
-        // Update the onlineUsers map so we can show presence for other users
         this.onlineUsers.set(status.userId, status);
-        // Ensure admin sees all online users in the dropdown
+        this.markConversationsStale(); // ADD THIS
+
         if (this.currentUserRole === 'admin' && status.userId !== this.currentUserId) {
           this.ensureConversation(status.userId);
         }
-        // If admin and no recipient selected, and a user comes online, optionally auto-select?
-        // (We currently auto-select when a message arrives.)
+
         if (
           this.currentUserRole === 'admin' &&
           !this.recipientId &&
@@ -268,7 +263,9 @@ export class ChatComponent implements OnInit, OnDestroy {
     // Connect to socket AFTER subscriptions are set up to avoid missing early presence snapshots
     this.socketService.connect(serverUrl, token);
   }
-
+  private markConversationsStale(): void {
+    this._conversationsNeedUpdate = true;
+  }
   ngOnDestroy(): void {
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
@@ -361,16 +358,28 @@ export class ChatComponent implements OnInit, OnDestroy {
   // Admin helpers
   private ensureConversation(userId: string): void {
     if (!userId) return;
+    const wasNew = !this.conversations.has(userId);
     if (!this.conversations.has(userId)) {
       this.conversations.set(userId, []);
     }
     if (!this.unreadByUser.has(userId)) {
       this.unreadByUser.set(userId, 0);
     }
+    if (wasNew) {
+      this.markConversationsStale(); // ADD THIS
+    }
   }
+  // Keep everything else the same, just rename the method
+  get userConversations(): Array<{
+    userId: string;
+    name: string;
+    unread: number;
+    online: boolean;
+  }> {
+    if (!this._conversationsNeedUpdate) {
+      return this._cachedConversations;
+    }
 
-  getConversations(): Array<{ userId: string; name: string; unread: number; online: boolean }> {
-    // Union of known conversations and online users (excluding self)
     const ids = new Set<string>();
     for (const userId of this.conversations.keys()) ids.add(userId);
     for (const [userId] of this.onlineUsers.entries()) {
@@ -387,12 +396,14 @@ export class ChatComponent implements OnInit, OnDestroy {
         online: status?.status === 'online',
       });
     });
-    // Sort by unread desc, then online first, then name
-    return list.sort(
+
+    this._cachedConversations = list.sort(
       (a, b) =>
         b.unread - a.unread ||
         (a.online === b.online ? a.name.localeCompare(b.name) : a.online ? -1 : 1)
     );
+    this._conversationsNeedUpdate = false;
+    return this._cachedConversations;
   }
 
   onRecipientChange(userId: string): void {
@@ -406,11 +417,15 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.recipientName = status?.name || 'User';
     this.ensureConversation(userId);
     const conv = this.conversations.get(userId)!;
-    // Load the messages for this conversation into the visible thread
     this.messages = [...conv];
-    // Reset unread for this user
+
+    // Reset unread and mark stale if there were unread messages
+    const hadUnread = this.unreadByUser.get(userId) || 0;
     this.unreadByUser.set(userId, 0);
-    // Scroll to bottom after a short delay
+    if (hadUnread > 0) {
+      this.markConversationsStale(); // ADD THIS
+    }
+
     setTimeout(() => this.scrollToBottom(), 50);
   }
 

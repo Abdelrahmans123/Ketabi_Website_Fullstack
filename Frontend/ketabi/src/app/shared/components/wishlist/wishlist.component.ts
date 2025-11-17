@@ -31,7 +31,7 @@ export class WishlistComponent implements OnInit, OnDestroy {
   constructor(
     private wishlistService: WishlistService,
     private cartService: CartService,
-    private toastService: ToastService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit() {
@@ -130,6 +130,7 @@ export class WishlistComponent implements OnInit, OnDestroy {
 
     this.cartService.addItem(book, 1, 'physical');
     this.toastService.show(`${book.name} added to cart`, 'success');
+    this.removeItem(book._id);
   }
 
   getBookImage(item: WishlistItem): string {

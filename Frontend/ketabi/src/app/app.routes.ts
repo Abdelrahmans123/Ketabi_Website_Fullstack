@@ -28,6 +28,12 @@ export const routes: Routes = [
     title: 'Dashboard',
   },
   {
+    path: 'admin',
+    loadChildren: () =>
+      import('./features/dashboard/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+    title: 'Dashboard',
+  },
+  {
     path: 'home',
     loadChildren: () => import('./features/home/home.routes').then((m) => m.HOME_ROUTES),
     title: 'Home',
@@ -77,8 +83,8 @@ export const routes: Routes = [
   { path: 'cart', component: CartComponent },
   {
     path: 'payment',
-    loadComponent: () => import('./shared/components/payment/payment').then(m => m.Payment),
-    canActivate: [PaymentGuard]
+    loadComponent: () => import('./shared/components/payment/payment').then((m) => m.Payment),
+    canActivate: [PaymentGuard],
   },
   {
     path: 'shop',
@@ -87,12 +93,13 @@ export const routes: Routes = [
   {
     path: 'my-library',
     component: MyLibrary,
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard],
   },
   {
     path: 'my-orders',
-    loadComponent: () => import('./shared/components/my-orders/my-orders').then((m) => m.MyOrdersComponent),
-    canActivate: [AuthGuard]
+    loadComponent: () =>
+      import('./shared/components/my-orders/my-orders').then((m) => m.MyOrdersComponent),
+    canActivate: [AuthGuard],
   },
   {
     path: 'profile',
