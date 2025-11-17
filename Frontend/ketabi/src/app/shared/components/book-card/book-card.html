@@ -1,17 +1,17 @@
-<div class="book-card-wrapper">
+<div class="book-card-wrapper" *ngIf="book as currentBook">
   <div class="book-card h-100">
     <!-- Book Image Container -->
     <div class="book-image-wrapper">
       <img [src]="image || 'default-book.jpg'" [alt]="title" class="card-img-top" />
       
       <!-- Discount Badge -->
-      <div class="card-discount-badge" *ngIf="book?.discount && (book?.discount || 0) > 0">
-        -{{ book?.discount }}%
+      <div class="card-discount-badge" *ngIf="currentBook.discount && (currentBook.discount || 0) > 0">
+        -{{ currentBook.discount }}%
       </div>
 
       <!-- Stock Badge -->
-      <div class="card-stock-badge" *ngIf="book?.status" [class.in-stock]="book?.status === 'in stock'" [class.out-of-stock]="book?.status === 'out of stock'">
-        {{ book?.status === 'in stock' ? 'In Stock' : 'Out of Stock' }}
+      <div class="card-stock-badge" *ngIf="currentBook.status" [class.in-stock]="currentBook.status === 'in stock'" [class.out-of-stock]="currentBook.status === 'out of stock'">
+        {{ currentBook.status === 'in stock' ? 'In Stock' : 'Out of Stock' }}
       </div>
 
       <!-- Overlay with Actions -->
@@ -23,7 +23,7 @@
             title="Add to cart"
             aria-label="Add to cart"
             (click)="addToCart($event)"
-            [disabled]="book?.status !== 'in stock'"
+            [disabled]="currentBook.status !== 'in stock'"
           >
             <i class="fa fa-shopping-cart" aria-hidden="true"></i>
           </button>
@@ -58,26 +58,26 @@
       <p class="card-text small text-muted text-truncate" [title]="author">{{ author }}</p>
 
       <!-- Rating -->
-      <div class="card-rating" *ngIf="book?.avgRating !== undefined && (book?.avgRating || 0) > 0">
+      <div class="card-rating" *ngIf="currentBook.avgRating !== undefined && (currentBook.avgRating || 0) > 0">
         <div class="stars">
           <i 
             class="fas fa-star" 
             *ngFor="let star of [1,2,3,4,5]"
-            [class.filled]="star <= Math.round(book?.avgRating || 0)"
+            [class.filled]="star <= Math.round(currentBook.avgRating || 0)"
           ></i>
         </div>
-        <span class="rating-value">{{ (book?.avgRating || 0).toFixed(1) }}</span>
-        <span class="rating-count" *ngIf="book?.ratingsCount">({{ book.ratingsCount }})</span>
+        <span class="rating-value">{{ (currentBook.avgRating || 0).toFixed(1) }}</span>
+        <span class="rating-count" *ngIf="currentBook.ratingsCount">({{ currentBook.ratingsCount }})</span>
       </div>
 
       <!-- Price and Rating -->
       <div class="card-footer-info" *ngIf="price">
         <div class="price-container">
-          <div class="price-wrapper" *ngIf="book?.discount && (book?.discount || 0) > 0">
+          <div class="price-wrapper" *ngIf="currentBook.discount && (currentBook.discount || 0) > 0">
             <span class="original-price">{{ price | currency : 'EGP' : 'symbol' : '1.0-0' }}</span>
-            <span class="final-price">{{ (price * (1 - ((book?.discount || 0) / 100))) | currency : 'EGP' : 'symbol' : '1.0-0' }}</span>
+            <span class="final-price">{{ (price * (1 - ((currentBook.discount || 0) / 100))) | currency : 'EGP' : 'symbol' : '1.0-0' }}</span>
           </div>
-          <div class="price-wrapper" *ngIf="!book?.discount || (book?.discount || 0) === 0">
+          <div class="price-wrapper" *ngIf="!currentBook.discount || (currentBook.discount || 0) === 0">
             <span class="final-price">{{ price | currency : 'EGP' : 'symbol' : '1.0-0' }}</span>
           </div>
         </div>

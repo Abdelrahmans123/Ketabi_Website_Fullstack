@@ -121,12 +121,12 @@ export class CartService {
         type = 'ebook';
         quantity = 1;
       }
-      const newItem = {
+      const newItem: CartItem = {
         _id: book._id,
         name: book.name,
         price: book.price,
         discount: book.discount || 0,
-        image: { url: book.image ? book.image.url : 'default-book.jpg' },
+        image: { url: book.image?.url ?? 'default-book.jpg' },
         stock: book.stock || 0,
         type: type,
         quantity: quantity

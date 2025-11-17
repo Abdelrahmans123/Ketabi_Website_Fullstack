@@ -5,7 +5,7 @@ export interface User {
 
 export interface Review {
     _id: string;
-    user: User;
+    user?: User;
     book: string;
     rating: number;
     title?: string;
