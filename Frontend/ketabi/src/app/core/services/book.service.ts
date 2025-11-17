@@ -24,9 +24,9 @@ export class BookService {
     return this.http.get<BookResponse>(`${this.apiUrl}/List-Books`);
   }
 
-  getBookById(id: string): Observable<Book> {
-    return this.http.get<Book>(`${this.apiUrl}/Get-Book/${id}`);
-  }
+getBookById(id: string): Observable<SingleBookResponse> {
+  return this.http.get<SingleBookResponse>(`${this.apiUrl}/Get-Book/${id}`);
+}
 
   downloadBook(bookId: string): Observable<any> {
     return this.http.get(`${this.apiUrl}/Download-Book/${bookId}`);

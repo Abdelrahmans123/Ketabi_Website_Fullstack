@@ -24,6 +24,7 @@ export class BookCard implements OnInit, OnDestroy {
   @Input() book!: Book;
 
   isInWishlist: boolean = false;
+  Math = Math; // Expose Math to template
   private destroy$ = new Subject<void>();
 
   constructor(

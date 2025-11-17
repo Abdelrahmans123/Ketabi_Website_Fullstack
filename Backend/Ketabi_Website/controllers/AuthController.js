@@ -485,6 +485,8 @@ export const login = asyncHandler(async (req, res, next) => {
             twoFactorOtpAttempts: 0,
         },
     });
+     console.log(`🚀 [Login OTP] for ${email}: ${otp}`);
+
     req.session.userId = user._id;
     req.session.isAuthenticated = false;
     req.session.otpPurpose = "login";
@@ -499,6 +501,8 @@ export const login = asyncHandler(async (req, res, next) => {
         statusCode: 200,
         message: "OTP sent to your email",
     });
+            console.log(`🚀 [Login OTP] for ${email}: ${otp}`);
+
 });
 
 export const confirmLogin = asyncHandler(async (req, res, next) => {
