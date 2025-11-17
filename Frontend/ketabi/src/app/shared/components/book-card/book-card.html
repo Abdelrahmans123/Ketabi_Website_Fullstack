@@ -1,57 +1,85 @@
 <div class="book-card-wrapper">
   <div class="book-card h-100">
-    <!-- Book Image -->
-    <img [src]="image || 'default-book.jpg'" [alt]="title" class="card-img-top" />
+    <!-- Book Image Container -->
+    <div class="book-image-wrapper">
+      <img [src]="image || 'assets/default-book.jpg'" [alt]="title" class="card-img-top" />
+      
+      <!-- Discount Badge -->
+      <div class="card-discount-badge" *ngIf="book?.discount && (book?.discount || 0) > 0">
+        -{{ book?.discount }}%
+      </div>
 
-    <!-- Overlay with Actions -->
-    <div class="card-overlay">
-      <div class="overlay-controls">
-        <!-- Add to Cart Button -->
-        <button
-          class="overlay-link btn-cart"
-          title="Add to cart"
-          aria-label="Add to cart"
-          (click)="addToCart($event)"
-        >
-          <i class="fa fa-shopping-cart" aria-hidden="true"></i>
-        </button>
+      <!-- Stock Badge -->
+      <div class="card-stock-badge" *ngIf="book?.status" [class.in-stock]="book?.status === 'in stock'" [class.out-of-stock]="book?.status === 'out of stock'">
+        {{ book?.status === 'in stock' ? 'In Stock' : 'Out of Stock' }}
+      </div>
 
-        <!-- View Details Button -->
-        <button
-          class="overlay-link btn-details"
-          [routerLink]="['/books', id]"
-          title="View details"
-          aria-label="View details"
-        >
-          <i class="fa fa-eye" aria-hidden="true"></i>
-        </button>
-        <button
-          class="overlay-link btn-wishlist"
-          title="Add to wishlist"
-          aria-label="Add to wishlist"
-          (click)="addToWishlist($event)"
-        >
-          @if(isInWishlist) {
-          <i class="fa-solid fa-heart text-danger"></i>
-          } @else {
-          <i class="fa-solid fa-heart"></i>
-          }
-        </button>
+      <!-- Overlay with Actions -->
+      <div class="card-overlay">
+        <div class="overlay-controls">
+          <!-- Add to Cart Button -->
+          <button
+            class="overlay-link btn-cart"
+            title="Add to cart"
+            aria-label="Add to cart"
+            (click)="addToCart($event)"
+            [disabled]="book?.status !== 'in stock'"
+          >
+            <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+          </button>
+
+          <!-- View Details Button -->
+          <button
+            class="overlay-link btn-details"
+            [routerLink]="['/books', id]"
+            title="View details"
+            aria-label="View details"
+          >
+            <i class="fa fa-eye" aria-hidden="true"></i>
+          </button>
+
+          <!-- Wishlist Button -->
+          <button
+            class="overlay-link btn-wishlist"
+            [class.active]="isInWishlist"
+            title="Add to wishlist"
+            aria-label="Add to wishlist"
+            (click)="addToWishlist($event)"
+          >
+            <i class="fa-solid fa-heart" [class.text-danger]="isInWishlist"></i>
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Card Body -->
     <div class="card-body">
-      <h6 class="card-title text-truncate">{{ title }}</h6>
-      <p class="card-text small text-muted text-truncate">{{ author }}</p>
+      <h6 class="card-title text-truncate" [title]="title">{{ title }}</h6>
+      <p class="card-text small text-muted text-truncate" [title]="author">{{ author }}</p>
+
+      <!-- Rating -->
+      <div class="card-rating" *ngIf="book?.avgRating !== undefined && (book?.avgRating || 0) > 0">
+        <div class="stars">
+          <i 
+            class="fas fa-star" 
+            *ngFor="let star of [1,2,3,4,5]"
+            [class.filled]="star <= Math.round(book?.avgRating || 0)"
+          ></i>
+        </div>
+        <span class="rating-value">{{ (book?.avgRating || 0).toFixed(1) }}</span>
+        <span class="rating-count" *ngIf="book?.ratingsCount">({{ book.ratingsCount }})</span>
+      </div>
 
       <!-- Price and Rating -->
-      <div class="card-footer-info" *ngIf="price || rating">
-        <div class="price-rating">
-          <span class="price" *ngIf="price">
-            {{ price | currency : 'EGP' : 'symbol' : '1.0-0' }}
-          </span>
-          <span class="rating" *ngIf="rating">★ {{ rating }}</span>
+      <div class="card-footer-info" *ngIf="price">
+        <div class="price-container">
+          <div class="price-wrapper" *ngIf="book?.discount && (book?.discount || 0) > 0">
+            <span class="original-price">{{ price | currency : 'EGP' : 'symbol' : '1.0-0' }}</span>
+            <span class="final-price">{{ (price * (1 - ((book?.discount || 0) / 100))) | currency : 'EGP' : 'symbol' : '1.0-0' }}</span>
+          </div>
+          <div class="price-wrapper" *ngIf="!book?.discount || (book?.discount || 0) === 0">
+            <span class="final-price">{{ price | currency : 'EGP' : 'symbol' : '1.0-0' }}</span>
+          </div>
         </div>
       </div>
     </div>
