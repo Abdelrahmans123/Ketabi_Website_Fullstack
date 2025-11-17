@@ -39,8 +39,8 @@ export const routes: Routes = [
     title: 'Wishlist',
   },
   {
-    path: 'order-success',
-    loadComponent: () => 
+    path: 'order-success/:orderId',
+    loadComponent: () =>
       import('./features/order/order.component').then((m) => m.OrderComponent),
   },
   {

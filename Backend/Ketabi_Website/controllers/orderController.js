@@ -370,8 +370,6 @@ export const getOrderHistory = asyncHandler(async (req, res, next) => {
 });
 
 export const getSingleOrder = asyncHandler(async (req, res, next) => {
-    console.log('sa');
-    
     const userId = req.user.id;
     const { orderId } = req.params;
 
@@ -380,7 +378,7 @@ export const getSingleOrder = asyncHandler(async (req, res, next) => {
     if (!order) {
         return res.status(404).json({ message: "Order not found" });
     }
-    console.log('order: ',order);
+    
     return successResponse ({
         res,
         statusCode: 200,

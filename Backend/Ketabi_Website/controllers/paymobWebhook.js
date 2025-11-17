@@ -10,10 +10,12 @@ import AppError from '../utils/AppError.js';
 import Sale from '../models/Sale.js';
 import PublisherOrder from '../models/publisherOrder.js';
 import { notifyOrderCancelled, notifyGiftReceived, notifyOrderConfirmed, notifyOrderDelivered, notifyOrderProcessing, notifyOrderShipped, notifyPaymentFailed, notifyPaymentRefunded, notifyPaymentSuccess } from "../services/OrderNotification.js";
+import mongoose from "mongoose";
 
 const processedWebhooks = new Set();
 
 export const handlePaymobCallback = async (req, res) => {
+    const session = await mongoose.startSession();
     try {
         // Extract callback data
         let callbackData;
@@ -24,7 +26,7 @@ export const handlePaymobCallback = async (req, res) => {
             if (merchantOrderId) {
                 // GET Request - Redirecting from Paymob
                 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-                const redirectUrl = `${frontendUrl}/order-success?orderId=${merchantOrderId}`;
+                const redirectUrl = `${frontendUrl}/order-success/${merchantOrderId}`;
                 return res.redirect(302, redirectUrl);
             }
             return res.status(200).json({ message: 'OK' });
@@ -92,6 +94,7 @@ export const handlePaymobCallback = async (req, res) => {
         if (!order.transactionId) {
             order.transactionId = transactionId.toString();
         }
+        let isShippingNeeded = false;
 
         // HANDLE PAYMENT SUCCESS
         if (transactionSuccess && isPending) {
@@ -106,6 +109,7 @@ export const handlePaymobCallback = async (req, res) => {
             // Update item payment statuses
             order.items.forEach(item => {
                 item.paymentStatus = paymentStatus.COMPLETED;
+                if(item.type === itemType.PHYSICAL) isShippingNeeded = true;
             });
 
             // Handle ebook delivery
@@ -216,7 +220,7 @@ export const handlePaymobCallback = async (req, res) => {
                             finalPrice: (saleItems.reduce((sum, i) => sum + i.total, 0)) * (1 - (order.discountApplied || 0) / 100),
                             coupon: order.coupon || "No Coupon",
                             couponDiscount: order.discountApplied || 0,
-                            paymentIntentId: paymentIntent.id,
+                            paymentIntentId: order.transactionId,
                             paymentMethod: order.paymentMethod
                         },
                     ],
@@ -224,8 +228,7 @@ export const handlePaymobCallback = async (req, res) => {
                 );
             }
 
-
-
+            console.log('order email: ', order.userEmail);
             // Send success email
             await sendEmail({
                 to: order.userEmail,
@@ -281,6 +284,8 @@ export const handlePaymobCallback = async (req, res) => {
         console.error('❌ WEBHOOK ERROR:', error.message);
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        await session.endSession();
     }
 };
 
