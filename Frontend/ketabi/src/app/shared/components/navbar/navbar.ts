@@ -209,4 +209,13 @@ export class Navbar implements OnInit, OnDestroy {
     this.notifications = [];
     this.notificationCount = 0;
   }
+
+  ordersComponentRouter(){
+    const role = this.authService.getUserRole();
+    if (role === 'user' || role === 'admin') {
+      this.router.navigate(['/my-orders']);
+    } else if (role === 'publisher'){
+      this.router.navigate(['/orders'])
+    }
+  }
 }

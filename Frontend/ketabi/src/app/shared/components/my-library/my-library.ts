@@ -78,7 +78,7 @@ export class MyLibrary implements OnInit, OnDestroy {
 
     console.log('Loading purchased books...');
 
-    this.orderService.getOrderHistory(1, 100)
+    this.orderService.getLibrary(1, 100)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {

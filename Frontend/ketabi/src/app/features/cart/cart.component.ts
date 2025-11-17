@@ -166,6 +166,8 @@ export class CartComponent implements OnInit {
     }
 
     console.log('Order payload:', orderPayload);
+    this.couponCode='';
+    this.couponService.resetCoupon();
     // call backend to create order + payment intent
     this.orderService.createOrder(orderPayload).pipe(take(1)).subscribe({
       next: (res: any) => {

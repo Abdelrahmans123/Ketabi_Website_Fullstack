@@ -7,7 +7,7 @@ import { ShopComponent } from './features/books/pages/shop/shop';
 import { MyLibrary } from './shared/components/my-library/my-library';
 import { SearchResultsComponent } from './features/books/pages/search-results/search-results';
 import { MyOrdersComponent } from './shared/components/my-orders/my-orders';
-import { Payment } from './shared/components/payment/payment';
+import { PaymentGuard } from './core/guards/payment.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -44,7 +44,7 @@ export const routes: Routes = [
     data: { roles: ['publisher'] },
     children: [
       {
-        path: 'dashboard,,',
+        path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/publisher/components/dashboard/dashboard.component').then(
             (m) => m.PublisherDashboardComponent
@@ -75,19 +75,23 @@ export const routes: Routes = [
     ],
   },
   { path: 'cart', component: CartComponent },
-  { path: 'payment', component: Payment },
+  {
+    path: 'payment',
+    loadComponent: () => import('./shared/components/payment/payment').then(m => m.Payment),
+    canActivate: [PaymentGuard]
+  },
   {
     path: 'shop',
     loadComponent: () => import('./features/books/pages/shop/shop').then((m) => m.ShopComponent),
   },
-    {
+  {
     path: 'my-library',
     component: MyLibrary,
     canActivate: [AuthGuard]
   },
   {
     path: 'my-orders',
-    component: MyOrdersComponent,
+    loadComponent: () => import('./shared/components/my-orders/my-orders').then((m) => m.MyOrdersComponent),
     canActivate: [AuthGuard]
   },
   {

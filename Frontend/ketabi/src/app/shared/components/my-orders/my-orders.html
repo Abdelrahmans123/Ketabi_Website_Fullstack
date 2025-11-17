@@ -38,10 +38,10 @@
         </div>
         <div class="order-status">
           <span [class]="'badge ' + getStatusBadgeClass(order.paymentStatus)">
-            {{ order.paymentStatus }}
+            Payment Status: {{ order.paymentStatus }}
           </span>
           <span [class]="'badge ' + getStatusBadgeClass(order.orderStatus)" style="margin-left: 8px;">
-            {{ order.orderStatus }}
+            Order Status: {{ order.orderStatus }}
           </span>
         </div>
       </div>
@@ -52,6 +52,7 @@
           <div class="item-details">
             <h6 class="item-title">{{ item.book?.name || 'Unknown Book' }}</h6>
             <p class="item-author">by {{ item.book?.author || 'Unknown' }}</p>
+            <p class="item-author">Quantity: {{ item.quantity || '1' }}</p>
             <small class="item-type">
               <span class="badge" [ngClass]="item.type === 'ebook' ? 'bg-primary' : 'bg-secondary'">
                 {{ item.type === 'ebook' ? '📱 E-Book' : '📦 Physical' }}
@@ -69,18 +70,14 @@
           <div class="item-status">
             <small>
               <span [class]="'badge ' + getDeliveryStatusBadgeClass(item.deliveryStatus)">
-                {{ item.deliveryStatus }}
+                Delivery Status: {{ item.deliveryStatus }}
               </span>
             </small>
           </div>
 
           <div class="item-actions">
-            <button
-              *ngIf="item.type === 'ebook' && item.pdf?.url"
-              class="btn btn-sm btn-primary"
-              (click)="downloadBook(item)"
-              title="Download E-Book"
-            >
+            <button *ngIf="item.type === 'ebook' && item.pdf?.url" class="btn btn-sm btn-primary"
+              (click)="downloadBook(item)" title="Download E-Book">
               <i class="fas fa-download"></i>
             </button>
           </div>
@@ -91,20 +88,32 @@
       <div class="order-total">
         <div class="total-row">
           <span>Subtotal:</span>
-          <strong>${{ order.totalPrice }}</strong>
+          <strong>{{ order.totalPrice |currency:'EGP'}}</strong>
         </div>
+        <!-- Coupon details -->
+        <ng-container *ngIf="order.coupon !== 'No Coupon'">
+          <div class="total-row">
+            <span>Coupon:</span>
+            <strong>{{ order.coupon }}</strong>
+          </div>
+          <div class="total-row">
+            <span>Discount:</span>
+            <strong>{{ order.discountApplied }}%</strong>
+          </div>
+        </ng-container>
         <div class="total-row">
           <span>Final Price:</span>
-          <strong class="final-price">${{ order.finalPrice }}</strong>
+          <strong class="final-price">{{ order.finalPrice|currency:'EGP'}}</strong>
         </div>
       </div>
+
 
       <!-- Shipping Info -->
       <div *ngIf="order.shippingAddress" class="shipping-info">
         <h6>📍 Shipping Address</h6>
         <p>
-          {{ order.shippingAddress.street }}<br/>
-          {{ order.shippingAddress.city }}<br/>
+          {{ order.shippingAddress.street }}<br />
+          {{ order.shippingAddress.city }}<br />
           {{ order.shippingAddress.phoneNumber }}
         </p>
       </div>
@@ -115,11 +124,7 @@
   <nav *ngIf="!isLoading && orders.length > 0" class="pagination-container">
     <ul class="pagination">
       <li class="page-item" [class.disabled]="!hasPrevPage">
-        <button
-          class="page-link"
-          (click)="prevPage()"
-          [disabled]="!hasPrevPage"
-        >
+        <button class="page-link" (click)="prevPage()" [disabled]="!hasPrevPage">
           Previous
         </button>
       </li>
@@ -131,11 +136,7 @@
       </li>
 
       <li class="page-item" [class.disabled]="!hasNextPage">
-        <button
-          class="page-link"
-          (click)="nextPage()"
-          [disabled]="!hasNextPage"
-        >
+        <button class="page-link" (click)="nextPage()" [disabled]="!hasNextPage">
           Next
         </button>
       </li>

@@ -18,7 +18,7 @@ export class OrderService {
     return this.http.post(`${this.base_url}`, payload);
   }
 
-  getOrderHistory(page: number = 1, limit: number = 10): Observable<any> {
+  getLibrary(page: number = 1, limit: number = 10): Observable<any> {
     const token = this.authService.getAccessToken();
 
     const headers = new HttpHeaders({
@@ -28,6 +28,10 @@ export class OrderService {
     return this.http.get(`${this.base_url_library}/library`, {
       headers
     });
+  }
+
+  getOrderHistory(page: number = 1, limit:number=10): Observable<any> {
+    return this.http.get(`${this.base_url}/order-history`);
   }
 
   getOrderDetails(orderId: string): Observable<any> {
