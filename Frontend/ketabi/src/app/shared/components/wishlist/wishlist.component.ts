@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
+import { RouterModule } from '@angular/router';
 import { WishlistService } from '../../../core/services/wishlist.service';
 import { WishlistItem } from '../../../core/models/wishlist.model';
 import { CartService } from '../../../core/services/cart.service';
@@ -12,7 +12,7 @@ import { ToastService } from '../../../core/services/toast.service';
 @Component({
   selector: 'app-wishlist',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './wishlist.component.html',
   styleUrl: './wishlist.component.css',
 })
@@ -31,7 +31,7 @@ export class WishlistComponent implements OnInit, OnDestroy {
   constructor(
     private wishlistService: WishlistService,
     private cartService: CartService,
-    private toastService: ToastService
+    private toastService: ToastService,
   ) {}
 
   ngOnInit() {

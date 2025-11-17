@@ -114,11 +114,15 @@ export class HomeComponent implements OnInit {
     });
   }
 
+  searchByCat(){
+    this.router.navigate(['/shop'])
+  }
+
   onCategoryClick(category: string): void {
     this.router.navigate(['/books', category]);
   }
 
   ShowAll(): void {
-    this.router.navigate(['/books']);
+    this.router.navigate(['/shop']);
   }
 }

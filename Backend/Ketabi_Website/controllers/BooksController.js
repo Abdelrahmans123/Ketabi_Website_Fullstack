@@ -363,7 +363,7 @@ export const getBooksByCategory = asyncHandler(async (req, res, next) => {
     const books = await Book.find(filter)
         .sort({ createdAt: -1 })
         .limit(8)
-        .select("name author image.url genre price rating discount stock")
+        .select("name author image.url genre price rating discount stock status")
         .lean();
     if (!books || books.length === 0) {
         return next(
