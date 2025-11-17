@@ -9,14 +9,6 @@ export const DASHBOARD_ROUTES: Routes = [
     pathMatch: 'full',
   },
   {
-    path: 'admin',
-    loadComponent: () =>
-      import('./admin/components/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-    title: 'Admin Dashboard',
-    canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['admin'] },
-  },
-  {
     path: 'publisher',
     loadComponent: () =>
       import('./publisher/components/dashboard/dashboard.component').then(

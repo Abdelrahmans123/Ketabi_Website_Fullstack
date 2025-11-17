@@ -1,3 +1,7 @@
+export interface Genre {
+  _id: string;
+  name: string;
+}
 export interface Book {
   _id: string;
   name: string;

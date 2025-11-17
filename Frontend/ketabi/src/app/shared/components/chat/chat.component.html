@@ -62,7 +62,7 @@
             (ngModelChange)="onRecipientChange($event)"
           >
             <option [ngValue]="''" disabled>Select a user...</option>
-            <option *ngFor="let conv of getConversations()" [ngValue]="conv.userId">
+            <option *ngFor="let conv of userConversations" [ngValue]="conv.userId">
               {{ conv.name || conv.userId }}
               {{ conv.online ? '(Online)' : '(Offline)' }}
               {{ conv.unread > 0 ? ' - ' + conv.unread + ' new' : '' }}

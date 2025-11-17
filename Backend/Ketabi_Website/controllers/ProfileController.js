@@ -2,6 +2,8 @@ import {
     updateOne,
     findById,
     findByIdAndUpdate,
+    findAll,
+    create,
 } from "../models/services/db.js";
 import User from "../models/User.js";
 import Book from "../models/Book.js";
@@ -11,6 +13,7 @@ import { successResponse } from "../utils/successResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { sendNotification } from "../utils/sendNotification.js";
 import { notificationType } from "../utils/notificationTypeEnum.js";
+import Response from "../models/Response.js";
 
 export const getProfile = asyncHandler(async (req, res, next) => {
     const user = await findById({ model: User, id: req.user._id });
@@ -93,7 +96,7 @@ export const getLibrary = asyncHandler(async (req, res, next) => {
         id: userId,
         populate: {
             path: "library",
-            model: "Book"
+            model: "Book",
         },
         select: "library",
     });
@@ -254,5 +257,42 @@ export const removeFromWishlist = asyncHandler(async (req, res, next) => {
         statusCode: 200,
         message: "Book removed from wishlist",
         data: formattedWishlist,
+    });
+});
+export const sendResponse = asyncHandler(async (req, res, next) => {
+    const { message } = req.body;
+    const userId = req.user._id;
+    if (!message) {
+        return next(AppError("Message is required", 400));
+    }
+    const newResponse = await create({
+        model: Response,
+        data: {
+            userId,
+            message,
+        },
+    });
+    return successResponse({
+        res,
+        statusCode: 201,
+        message: "Response sent successfully",
+        data: newResponse,
+    });
+});
+export const getResponses = asyncHandler(async (req, res, next) => {
+    const userId = req.user._id;
+    const responses = await findAll({
+        model: Response,
+        filter: { userId },
+        sort: { createdAt: -1 },
+    });
+    if (!responses || responses.length === 0) {
+        return next(new AppError("No responses found for this user", 404));
+    }
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "User responses retrieved successfully",
+        data: responses,
     });
 });

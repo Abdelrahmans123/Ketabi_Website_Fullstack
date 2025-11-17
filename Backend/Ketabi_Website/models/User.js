@@ -46,7 +46,6 @@ const userSchema = new mongoose.Schema(
         confirmEmail: Date,
         confirmEmailOtp: {
             type: String,
-            required: true,
         },
         confirmEmailOtpExpires: Date,
         resetPasswordOtp: {

@@ -6,12 +6,11 @@ import {
   HttpEvent,
   HttpErrorResponse,
 } from '@angular/common/http';
-import { Observable, throwError, BehaviorSubject } from 'rxjs';
-import { catchError, switchMap, filter, take } from 'rxjs/operators';
+import { Observable, throwError, BehaviorSubject, of } from 'rxjs';
+import { catchError, switchMap, filter, take, retry, delay } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-// State management for token refresh
 let isRefreshing = false;
 const refreshTokenSubject = new BehaviorSubject<string | null>(null);
 
@@ -22,12 +21,12 @@ export const AuthInterceptor: HttpInterceptorFn = (
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  // Skip token injection for public auth endpoints (but NOT refresh)
+  // Skip auth for public endpoints
   if (isPublicAuthEndpoint(req.url)) {
     return next(req);
   }
 
-  // Add access token to request (except for refresh endpoint which needs refresh token)
+  // Add token to request
   if (!req.url.includes('/auth/refresh')) {
     const accessToken = authService.getAccessToken();
     if (accessToken) {
@@ -45,19 +44,68 @@ export const AuthInterceptor: HttpInterceptorFn = (
   }
 
   return next(req).pipe(
-    catchError((error) => {
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        // Don't retry if refresh token request itself failed
-        if (req.url.includes('/auth/refresh')) {
-          isRefreshing = false;
-          authService.clearAuthData();
-          router.navigate(['/auth/login'], {
-            queryParams: { reason: 'session_expired' },
-          });
-          return throwError(() => new Error('Refresh token expired'));
+    // Add retry logic for network errors (but not for auth errors)
+    retry({
+      count: 1,
+      delay: (error) => {
+        // Only retry on network errors, not auth errors
+        if (error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500)) {
+          console.log('🔄 Retrying request after network error');
+          return of(error).pipe(delay(1000));
         }
-        return handle401Error(req, next, authService, router);
+        throw error;
+      },
+    }),
+    catchError((error) => {
+      if (error instanceof HttpErrorResponse) {
+        // Handle 401 - Unauthorized
+        if (error.status === 401) {
+          // If refresh token request failed, force logout
+          if (req.url.includes('/auth/refresh')) {
+            console.log('❌ Refresh token failed');
+            isRefreshing = false;
+            authService.clearAuthData();
+            router.navigate(['/auth/login'], {
+              queryParams: { reason: 'session_expired' },
+            });
+            return throwError(() => new Error('Refresh token expired'));
+          }
+
+          // Try to refresh the token
+          return handle401Error(req, next, authService, router);
+        }
+
+        // Handle 403 - Forbidden
+        if (error.status === 403) {
+          const errorMessage = error.error?.message || '';
+
+          if (
+            errorMessage.includes('User not found') ||
+            errorMessage.includes('User is inactive') ||
+            errorMessage.includes('User deleted') ||
+            error.error?.userDeleted
+          ) {
+            console.log('❌ User account issue detected');
+            handleUserDeletion(authService, router);
+            return throwError(() => new Error('User account no longer exists'));
+          }
+        }
+
+        // Handle user deletion signals
+        if (error.error?.shouldLogout || error.error?.userDeleted) {
+          console.log('❌ User session invalidated');
+          handleUserDeletion(authService, router);
+          return throwError(() => new Error('User session invalidated'));
+        }
+
+        // Handle network errors gracefully
+        if (error.status === 0) {
+          console.error('❌ Network error - server may be down');
+          // Don't log out on network errors
+          return throwError(() => new Error('Network error - please check your connection'));
+        }
       }
+
       return throwError(() => error);
     })
   );
@@ -84,11 +132,14 @@ function handle401Error(
     const refreshToken = authService.getRefreshToken();
 
     if (!refreshToken) {
+      console.log('❌ No refresh token available');
       isRefreshing = false;
       authService.clearAuthData();
       router.navigate(['/auth/login']);
       return throwError(() => new Error('No refresh token available'));
     }
+
+    console.log('🔄 Attempting to refresh token...');
 
     return authService.refreshToken().pipe(
       switchMap((response: any) => {
@@ -99,12 +150,29 @@ function handle401Error(
           throw new Error('No access token in refresh response');
         }
 
+        console.log('✅ Token refreshed successfully');
         refreshTokenSubject.next(newAccessToken);
         authService.setTokens(newAccessToken, response.data?.refreshToken || response.refreshToken);
+
+        // Retry the original request with new token
         return next(addTokenToRequest(req, newAccessToken));
       }),
       catchError((err) => {
+        console.error('❌ Token refresh failed:', err);
         isRefreshing = false;
+
+        if (err instanceof HttpErrorResponse) {
+          const errorMessage = err.error?.message || '';
+          if (
+            errorMessage.includes('User not found') ||
+            errorMessage.includes('User deleted') ||
+            err.error?.userDeleted
+          ) {
+            handleUserDeletion(authService, router);
+            return throwError(() => new Error('User account deleted'));
+          }
+        }
+
         authService.clearAuthData();
         router.navigate(['/auth/login'], {
           queryParams: { reason: 'session_expired' },
@@ -113,7 +181,8 @@ function handle401Error(
       })
     );
   } else {
-    // Queue subsequent requests while refresh is in progress
+    // Wait for the token refresh to complete
+    console.log('⏳ Waiting for token refresh...');
     return refreshTokenSubject.pipe(
       filter((token) => token !== null),
       take(1),
@@ -122,7 +191,16 @@ function handle401Error(
   }
 }
 
-// Only skip public endpoints that don't need any authentication
+function handleUserDeletion(authService: AuthService, router: Router): void {
+  console.log('🔴 Handling user deletion/deactivation');
+  isRefreshing = false;
+  refreshTokenSubject.next(null);
+  authService.clearAuthData();
+  router.navigate(['/auth/login'], {
+    queryParams: { reason: 'account_deleted' },
+  });
+}
+
 function isPublicAuthEndpoint(url: string): boolean {
   const publicEndpoints = [
     '/auth/login',
@@ -134,6 +212,5 @@ function isPublicAuthEndpoint(url: string): boolean {
     '/auth/reset-password',
     '/auth/confirm-login',
   ];
-  // Note: /auth/refresh is NOT in this list - it needs the refresh token
   return publicEndpoints.some((endpoint) => url.includes(endpoint));
 }

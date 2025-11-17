@@ -64,7 +64,9 @@
     <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
     Remember me
   </label>
-
+  <div class="forgot-password">
+    <a href="#" routerLink="/auth/forgot-password">Forgot Password?</a>
+  </div>
   <!-- Submit Button -->
   <button type="submit" class="submit-btn" [disabled]="loginForm.invalid || isLoading">
     @if(isLoading) { Logging in... } @else { Login }
