@@ -16,6 +16,8 @@ interface Order {
   orderStatus: string;
   shippingAddress: any;
   createdAt: string;
+  coupon:string;
+  discountApplied:number;
 }
 
 @Component({
