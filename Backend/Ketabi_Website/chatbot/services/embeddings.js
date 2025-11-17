@@ -8,7 +8,6 @@ const EMBEDDING_TIMEOUT = 8000;
 const MIN_QUERY_LENGTH = 3; 
 const EXPECTED_EMBEDDING_SIZE = 3072;
 
-
 function validateQuery(text) {
   if (!text || typeof text !== 'string') {
     return { valid: false, error: 'INVALID_QUERY_TYPE' };
@@ -24,7 +23,6 @@ function validateQuery(text) {
     };
   }
 
-
   const actualCharacters = trimmed.replace(/[^A-Za-z\u0600-\u06FF0-9]/g, '').length;
   
   if (actualCharacters < MIN_QUERY_LENGTH) {
@@ -34,7 +32,6 @@ function validateQuery(text) {
       message: `Query too short (minimum ${MIN_QUERY_LENGTH} characters)`
     };
   }
-
 
   if (trimmed.length > 500) {
     return { 
@@ -58,7 +55,7 @@ function validateEmbedding(embedding, expectedSize = EXPECTED_EMBEDDING_SIZE) {
   }
 
   if (embedding.length !== expectedSize) {
-    console.warn(`⚠️ Embedding size mismatch: got ${embedding.length}, expected ${expectedSize}`);
+    console.warn(` Embedding size mismatch: got ${embedding.length}, expected ${expectedSize}`);
 
     if (embedding.length < 100 || embedding.length > 5000) {
       throw new Error(`EMBEDDING_SIZE_INVALID: ${embedding.length}`);
@@ -67,7 +64,6 @@ function validateEmbedding(embedding, expectedSize = EXPECTED_EMBEDDING_SIZE) {
 
   return embedding;
 }
-
 
 export const generateEmbedding = async (text, timeout = EMBEDDING_TIMEOUT) => {
   try {
@@ -82,8 +78,7 @@ export const generateEmbedding = async (text, timeout = EMBEDDING_TIMEOUT) => {
       return cachedEmbedding;
     }
 
-    console.log(`🔄 Generating embedding for: "${validation.text.substring(0, 50)}..."`);
-
+    console.log(` Generating embedding for: "${validation.text.substring(0, 50)}..."`);
 
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('EMBEDDING_TIMEOUT')), timeout)
@@ -103,7 +98,6 @@ export const generateEmbedding = async (text, timeout = EMBEDDING_TIMEOUT) => {
 
     const embedding = validateEmbedding(result.embeddings[0].values);
 
-   
     await saveToCache('embedding', validation.text, embedding);
     console.log(` Embedding generated and cached`);
 
@@ -120,7 +114,6 @@ export const generateEmbedding = async (text, timeout = EMBEDDING_TIMEOUT) => {
   }
 };
 
-
 export const generateBookEmbedding = async (book) => {
   if (!book.name || !book.author) {
     throw new Error('Book must have name and author');
@@ -131,12 +124,10 @@ export const generateBookEmbedding = async (book) => {
   return await generateEmbedding(bookText);
 };
 
-
 export const extractPriceRange = async (query) => {
   const DEFAULT_RANGE = { minPrice: null, maxPrice: null };
 
   try {
-
     const cachedPrice = await getFromCache('priceExtract', query);
     if (cachedPrice) {
       console.log(` Cache HIT: Price range retrieved from Redis`);
@@ -148,7 +139,7 @@ export const extractPriceRange = async (query) => {
       return DEFAULT_RANGE;
     }
 
-    console.log(`🔄 Extracting price range from: "${query}"`);
+    console.log(` Extracting price range from: "${query}"`);
 
     const prompt = `Extract price range from: "${validation.text}". Reply with ONLY JSON: {"minPrice": number or null, "maxPrice": number or null}`;
 
@@ -184,11 +175,10 @@ export const extractPriceRange = async (query) => {
     return parsed;
 
   } catch (error) {
-    console.error('❌ Price extraction error:', error.message);
+    console.error(' Price extraction error:', error.message);
     return DEFAULT_RANGE;
   }
 };
-
 
 export const detectLanguage = (text) => {
   if (!text || typeof text !== 'string') return 'en';
@@ -199,7 +189,6 @@ export const detectLanguage = (text) => {
 
   if (arabicChars.length && !latinChars.length) return 'ar';
   if (latinChars.length && !arabicChars.length) return 'en';
-
 
   if (arabicChars.length > latinChars.length) return 'ar';
   if (latinChars.length > arabicChars.length) return 'en';

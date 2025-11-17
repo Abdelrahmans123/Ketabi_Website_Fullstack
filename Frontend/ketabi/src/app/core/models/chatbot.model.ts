@@ -3,7 +3,9 @@ export interface ChatbotRequest {
   language?: string;
   age?: string;
   limit?: number;
+  genre?: string;
 }
+
 
 export interface ChatbotResponse {
   success: boolean;
@@ -15,6 +17,8 @@ export interface ChatbotResponse {
       query: string;
       language: string;
       timestamp: string;
+      isEmptySearch?: boolean;
     };
+    fromCache?: boolean;
   };
 }

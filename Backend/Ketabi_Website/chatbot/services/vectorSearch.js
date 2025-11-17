@@ -1,6 +1,7 @@
 import { generateEmbedding, extractPriceRange } from './embeddings.js';
 import { getFromCache, saveToCache } from './cache.js';
 import Book from '../../models/Book.js';
+import Genre from '../../models/Genre.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,12 +18,12 @@ function getVectorIndexName() {
 
 function validateBookDocument(book) {
   if (!book.name || !book.author) {
-    console.warn('⚠️ Book missing required fields:', book._id);
+    console.warn(' Book missing required fields:', book._id);
     return false;
   }
 
   if (typeof book.price !== 'number' || book.price < 0) {
-    console.warn(`⚠️ Book ${book._id} has invalid price:`, book.price);
+    console.warn(` Book ${book._id} has invalid price:`, book.price);
     book.price = 0;
   }
 
@@ -33,12 +34,62 @@ function validateBookDocument(book) {
   return true;
 }
 
-
-async function getRandomSuggestions(limit = 3) {
+// Helper function to extract genre from query
+async function extractGenreFromQuery(query) {
   try {
-    console.log('🔄 Getting random book suggestions...');
+    console.log(` Extracting genre from query: "${query}"`);
+
+    // Get all genres from database
+    const genres = await Genre.find({});
+    
+    if (!genres || genres.length === 0) {
+      console.log('No genres found in database');
+      return null;
+    }
+
+    // Convert query to lowercase for matching
+    const queryLower = query.toLowerCase();
+    
+    // Check if query contains any genre name or slug
+    for (const genre of genres) {
+      const genreName = genre.name.toLowerCase();
+      const genreSlug = genre.slug.toLowerCase();
+      
+      if (
+        queryLower.includes(genreName) || 
+        queryLower.includes(genreSlug) ||
+        queryLower.includes(genreSlug.replace(/-/g, ' '))
+      ) {
+        console.log(` Found genre: ${genre.name} (${genre.slug})`);
+        return {
+          id: genre._id,
+          name: genre.name,
+          slug: genre.slug
+        };
+      }
+    }
+
+    console.log('No matching genre found in query');
+    return null;
+
+  } catch (error) {
+    console.error('Error extracting genre:', error.message);
+    return null;
+  }
+}
+
+async function getRandomSuggestions(limit = 3, genreFilter = null) {
+  try {
+    console.log(' Getting random book suggestions...');
+
+    const matchStage = { $match: {} };
+    
+    if (genreFilter) {
+      matchStage.$match.genre = genreFilter;
+    }
 
     const suggestions = await Book.aggregate([
+      matchStage,
       { $sample: { size: limit * 2 } }, 
       {
         $lookup: {
@@ -85,7 +136,7 @@ export const searchBooks = async (query, options = {}) => {
     console.log(' Query:', query);
     console.log(` Limit: ${limit} books`);
 
-   
+    // Check cache first
     const cacheKey = `${query}_${JSON.stringify(filter)}_${limit}`;
     const cachedResults = await getFromCache('search', cacheKey);
     if (cachedResults) {
@@ -93,18 +144,31 @@ export const searchBooks = async (query, options = {}) => {
       return cachedResults;
     }
 
+    // Extract genre from query
+    const detectedGenre = await extractGenreFromQuery(query);
+
     const { minPrice, maxPrice } = await extractPriceRange(query);
     console.log(` Price Range: ${minPrice || 'any'} - ${maxPrice || 'any'}`);
 
     const queryEmbedding = await generateEmbedding(query);
     console.log(' Embedding generated');
 
+    // Build vector search filter
     const vectorFilter = {};
+    
+    // Add genre filter if detected from query
+    if (detectedGenre) {
+      vectorFilter.genre = detectedGenre.id;
+      console.log(` Genre filter applied: ${detectedGenre.name}`);
+    }
+    
+    // Add other filters
     if (filter.bookLanguage) vectorFilter.bookLanguage = filter.bookLanguage;
     if (filter.recommendedAge) vectorFilter.recommendedAge = filter.recommendedAge;
     if (filter.status) vectorFilter.status = filter.status;
+    if (filter.genre) vectorFilter.genre = filter.genre; // Allow explicit genre filter
 
-    console.log('🔍 Vector Filter:', JSON.stringify(vectorFilter, null, 2));
+    console.log(' Vector Filter:', JSON.stringify(vectorFilter, null, 2));
 
     const priceMatch = {};
     if (minPrice !== null && minPrice >= 0) priceMatch.$gte = minPrice;
@@ -188,12 +252,12 @@ export const searchBooks = async (query, options = {}) => {
       { $limit: limit }
     );
 
-    console.log('🔄 Running aggregation pipeline...');
+    console.log(' Running aggregation pipeline...');
     const results = await Book.aggregate(pipeline);
 
-    console.log(`📚 Found ${results.length} books (limit: ${limit})`);
+    console.log(` Found ${results.length} books (limit: ${limit})`);
 
-    // تنظيف النتائج
+    // Validate results
     const validatedResults = results.filter((book) => validateBookDocument(book));
 
     if (validatedResults.length > 0) {
@@ -202,22 +266,23 @@ export const searchBooks = async (query, options = {}) => {
       });
     }
 
-   
+    // Get random suggestions if no results found
     let finalResults = validatedResults;
     if (validatedResults.length === 0) {
       console.warn('⚠️ No results found. Getting random suggestions...');
-      finalResults = await getRandomSuggestions(limit);
-      finalResults.isEmptySearch = true; // إضافة flag للعلم أنها اقتراحات
+      const genreIdForSuggestions = detectedGenre ? detectedGenre.id : null;
+      finalResults = await getRandomSuggestions(limit, genreIdForSuggestions);
+      finalResults.isEmptySearch = true;
     }
 
-
+    // Cache results
     await saveToCache('search', cacheKey, finalResults);
-    console.log(`✅ Search results cached (${finalResults.length} books)`);
+    console.log(` Search results cached (${finalResults.length} books)`);
 
     return finalResults;
 
   } catch (error) {
-    console.error('❌ Vector search error:', error.message);
+    console.error(' Vector search error:', error.message);
 
     if (error.message.includes('VECTOR_INDEX_MISCONFIGURED')) {
       throw new Error('INDEX_CONFIG_ERROR: ' + error.message);
