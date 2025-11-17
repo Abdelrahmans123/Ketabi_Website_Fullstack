@@ -4,7 +4,8 @@ import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { PublisherService } from '../../../../core/services/publisher.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PublisherOrder, PublisherOrdersResponse, UpdatePublisherOrderRequest, DeliveryStatus, PaymentStatus } from '../../models/order.model';
-
+import { ToastService } from '../../../../core/services/toast.service';
+import { Router } from '@angular/router';
 @Component({
     selector: 'app-publisher-orders',
     standalone: true,
@@ -37,6 +38,8 @@ export class PublisherOrdersComponent implements OnInit {
         private publisherService: PublisherService,
         private fb: FormBuilder,
         private authService: AuthService,
+        private toastService:ToastService,
+        private router:Router
     ) {
         this.updateForm = this.fb.group({
             deliveryStatus: [''],
@@ -164,6 +167,15 @@ export class PublisherOrdersComponent implements OnInit {
     getStatusClass(status: string): string {
         const statusLower = status.toLowerCase().replace(' ', '-');
         return `status-${statusLower}`;
+    }
+
+    goToBookDetails(item:any):void{
+        const id = item.book?._id;
+        if (!id){
+            this.toastService.show('Unknown Book','error')
+        } else {
+            this.router.navigate(['/books',id])
+        }
     }
 }
 

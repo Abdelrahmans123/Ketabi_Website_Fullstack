@@ -88,7 +88,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     if (!this.book) return;
     this.wishlistService.toggleWishlist(this.book._id).subscribe({
       next: () => {
-        const message = !this.isInWishlist ? 'Added to wishlist!' : 'Removed from wishlist!';
+        const message = this.isInWishlist ? 'Added to wishlist!' : 'Removed from wishlist!';
         this.toast.show(message, 'success');
       },
       error: (error) => {
