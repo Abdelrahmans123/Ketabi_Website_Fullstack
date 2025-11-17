@@ -363,7 +363,7 @@ export const getBooksByCategory = asyncHandler(async (req, res, next) => {
     const books = await Book.find(filter)
         .sort({ createdAt: -1 })
         .limit(8)
-        .select("name author image.url genre price rating discount stock")
+        .select("name author image.url genre price rating discount stock status")
         .lean();
     if (!books || books.length === 0) {
         return next(
@@ -595,6 +595,8 @@ export const searchBooks = asyncHandler(async (req, res, next) => {
                             recommendedAge: 1,
                             "genreDetails.name": 1,
                             searchScore: 1,
+                            stock: 1,
+                            status: 1
                         },
                     },
                 ],
@@ -606,7 +608,6 @@ export const searchBooks = asyncHandler(async (req, res, next) => {
     const [result] = await Book.aggregate(pipeline);
     const queryTime = Date.now() - startTime;
     const total = result.metadata[0]?.total || 0;
-
     return successResponse({
         res,
         statusCode: 200,

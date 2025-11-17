@@ -9,7 +9,7 @@
   <div class="container">
     <div class="row g-4">
       <div class="col-lg-3 col-md-6" *ngFor="let cat of categories">
-        <a [routerLink]="['/books', cat.category]" style="text-decoration: none; cursor: pointer">
+        <a (click)="searchByCat()" style="text-decoration: none; cursor: pointer">
           <app-category-card [icon]="cat.icon" [title]="cat.title"> </app-category-card>
         </a>
       </div>
@@ -43,6 +43,7 @@
           [title]="book.name"
           [author]="book.author"
           [book]="book"
+          [id]="book._id"
         >
         </app-book-card>
       </div>
