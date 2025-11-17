@@ -142,25 +142,83 @@ export const updateBook = asyncHandler(async (req, res, next) => {
         }
     }
 
-    if (req.body.genre_id) {
-        if (!mongoose.Types.ObjectId.isValid(String(req.body.genre_id))) {
+    
+    const updateData = { ...req.body };
+
+    if (updateData.price !== undefined) {
+        updateData.price = typeof updateData.price === 'string' ? parseFloat(updateData.price) : updateData.price;
+    }
+    if (updateData.cost !== undefined) {
+        updateData.cost = typeof updateData.cost === 'string' ? parseFloat(updateData.cost) : updateData.cost;
+    }
+    if (updateData.discount !== undefined && updateData.discount !== '') {
+        updateData.discount = typeof updateData.discount === 'string' ? parseFloat(updateData.discount) : updateData.discount;
+    }
+    if (updateData.stock !== undefined) {
+        updateData.stock = typeof updateData.stock === 'string' ? parseInt(updateData.stock, 10) : updateData.stock;
+    }
+    if (updateData.noOfPages !== undefined) {
+        updateData.noOfPages = typeof updateData.noOfPages === 'string' ? parseInt(updateData.noOfPages, 10) : updateData.noOfPages;
+    }
+
+  
+    if (updateData.price !== undefined && updateData.cost !== undefined) {
+        if (updateData.price <= updateData.cost) {
+            return next(new AppError("Price must be greater than cost", 400));
+        }
+    } else if (updateData.price !== undefined) {
+        
+        if (updateData.price <= oldBook.cost) {
+            return next(new AppError("Price must be greater than cost", 400));
+        }
+    } else if (updateData.cost !== undefined) {
+        
+        if (oldBook.price <= updateData.cost) {
+            return next(new AppError("Price must be greater than cost", 400));
+        }
+    }
+
+    if (updateData.genre_id) {
+        if (!mongoose.Types.ObjectId.isValid(String(updateData.genre_id))) {
             return next(new AppError("Invalid genre_id", 400));
         }
 
-        const genre = await findById({ model: Genre, id: req.body.genre_id });
+        const genre = await findById({ model: Genre, id: updateData.genre_id });
         if (!genre) {
             return next(new AppError("No Such genre exists", 404));
         }
 
-        req.body.genre = genre._id;
-        delete req.body.genre_id;
+        updateData.genre = genre._id;
+        delete updateData.genre_id;
     }
 
-    const isTheSameBook = Object.keys(req.body).every((key) => {
-        return req.body[key] === oldBook[key];
+//    pdf ----------  upload 
+    if (req.file) {
+        const file = req.file;
+        const result = await uploadBufferToS3(
+            file.buffer,
+            file.originalname,
+            file.mimetype,
+            "books/pdf"
+        );
+
+        updateData.pdf = {
+            key: result.key,
+            url: result.url,
+            fileName: result.fileName,
+            size: result.size,
+            mimeType: result.mimeType,
+            uploadedAt: result.uploadedAt,
+        };
+    }
+
+    const isTheSameBook = Object.keys(updateData).every((key) => {
+        // Skip PDF comparison as it's an object
+        if (key === 'pdf') return true;
+        return updateData[key] === oldBook[key];
     });
 
-    if (isTheSameBook) {
+    if (isTheSameBook && !req.file) {
         return successResponse({
             res,
             statusCode: 200,
@@ -172,25 +230,24 @@ export const updateBook = asyncHandler(async (req, res, next) => {
     const updatedBook = await findByIdAndUpdate({
         model: Book,
         id,
-        data: req.body,
+        data: updateData,
     });
+
     if (
         oldBook.status === "out of stock" &&
         updatedBook.status === "in stock"
     ) {
-
-
         await notifyBookBackInStock(id);
     }
     if (
-        req.body.price !== undefined &&
+        updateData.price !== undefined &&
         updatedBook.price < oldBook.price &&
         updatedBook.status === "in stock"
     ) {
         await notifyPriceDrop(id, oldBook.price, updatedBook.price);
     }
     if (
-        req.body.stock !== undefined &&
+        updateData.stock !== undefined &&
         updatedBook.stock <= 5 &&
         updatedBook.stock > 0 &&
         updatedBook.status === "in stock"

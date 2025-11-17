@@ -50,7 +50,7 @@ export class PublisherBookFormComponent implements OnInit, OnChanges {
     { label: 'Removed', value: 'removed' },
   ];
 
-  constructor(private fb: FormBuilder) {}
+  constructor(private fb: FormBuilder) { }
 
   ngOnInit(): void {
     this.buildForm();
@@ -107,7 +107,23 @@ export class PublisherBookFormComponent implements OnInit, OnChanges {
       recommendedAge: ['all', Validators.required],
       bookLanguage: ['english', Validators.required],
       pdf: [null],
-    });
+    }, { validators: this.priceGreaterThanCostValidator });
+  }
+
+  private priceGreaterThanCostValidator(group: FormGroup): { [key: string]: any } | null {
+    const price = group.get('price')?.value;
+    const cost = group.get('cost')?.value;
+
+    if (price !== null && price !== '' && cost !== null && cost !== '') {
+      const priceNum = Number(price);
+      const costNum = Number(cost);
+
+      if (!isNaN(priceNum) && !isNaN(costNum) && priceNum <= costNum) {
+        return { priceMustBeGreaterThanCost: true };
+      }
+    }
+
+    return null;
   }
 
   private patchFormValues(): void {
@@ -172,8 +188,8 @@ export class PublisherBookFormComponent implements OnInit, OnChanges {
       stock: Number(raw.stock),
       noOfPages: Number(raw.noOfPages),
       status: raw.status,
-      recommendedAge: raw.recommendedAge,
-      bookLanguage: raw.bookLanguage,
+      recommendedAge: raw.recommendedAge || 'all',
+      bookLanguage: raw.bookLanguage || 'english',
     };
 
     if (this.mode === 'create') {
