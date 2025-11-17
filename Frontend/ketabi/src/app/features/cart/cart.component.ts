@@ -14,6 +14,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 import { StripeService } from '../../core/services/stripe.service';
+import { AuthService } from '../../core/services/auth.service';
 @Component({
   selector: 'app-cart',
   standalone: true,
@@ -49,7 +50,8 @@ export class CartComponent implements OnInit {
     private toastService: ToastService,
     private orderService: OrderService,
     private router: Router,
-    private stripeService: StripeService
+    private stripeService: StripeService,
+    private authService:AuthService
   ) { }
 
   async ngOnInit() {
@@ -168,6 +170,11 @@ export class CartComponent implements OnInit {
     console.log('Order payload:', orderPayload);
     this.couponCode='';
     this.couponService.resetCoupon();
+
+    if (this.authService.getCurrentUserRole() != 'user'){
+      this.toastService.show('Only users are allowed to buy books');
+      return;
+    }
     // call backend to create order + payment intent
     this.orderService.createOrder(orderPayload).pipe(take(1)).subscribe({
       next: (res: any) => {
@@ -195,7 +202,7 @@ export class CartComponent implements OnInit {
         
       },
       error: err => {
-        this.toastService.show(err.message || 'Order creation failed', 'error');
+        this.toastService.show(err.error.message || 'Order creation failed', 'error');
         this.checkingOut = false;
       }
     });

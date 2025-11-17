@@ -130,7 +130,7 @@ import { handlePaymobCallback } from "../controllers/paymobWebhook.js";
 const router = express.Router();
 
 // create order for users
-router.post('/', authenticate, authorize(roleEnum.publisher), validate(createOrderSchema), createOrder);
+router.post('/', authenticate, authorize(roleEnum.user), validate(createOrderSchema), createOrder);
 
 // get orders for admins
 router.get('/', authenticate, authorize(roleEnum.admin), queryValidate(getAllOrdersSchema), getOrdersAdmin);

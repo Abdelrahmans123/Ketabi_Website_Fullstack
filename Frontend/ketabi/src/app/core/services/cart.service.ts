@@ -24,7 +24,8 @@ export class CartService {
   // -----------------------------
   private loadCart() {
     if (this.authService.isLoggedIn()) {
-      this.fetchCartFromBackend();}
+      this.fetchCartFromBackend();
+    }
     else this.loadCartFromLocalStorage();
   }
 
@@ -40,7 +41,6 @@ export class CartService {
       .subscribe((isLogOut) => {
         if (isLogOut) {
           this.clearCart();
-          console.log('hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh');   
           this.loadCart();
         }
       })
@@ -117,6 +117,10 @@ export class CartService {
       type === 'physical' ? existingItem.quantity = Math.min(existingItem.quantity + quantity, (existingItem.stock || 1)) : existingItem.quantity = 1;
       this.saveCartToBackend(cartMethods.PUT, existingItem);
     } else {
+      if (!book.stock || book.stock == 0) {
+        type = 'ebook';
+        quantity = 1;
+      }
       const newItem = {
         _id: book._id,
         name: book.name,
@@ -147,15 +151,21 @@ export class CartService {
     const cart = this.cartSubject.value;
     const item = cart.items.find(i => i._id === bookId);
     if (item) {
-      item.type = type;
-      if (type === 'ebook') {
+      if (!item.stock || item.stock == 0) {
+        item.type = 'ebook';
         item.quantity = 1;
+        this.toast.show(`Book: ${item.name} only available in ebook`)
       } else {
-        item.quantity = Math.min(quantity, item.stock || 0);
-        if (item.quantity == 0) {
-          this.toast.show(`Book: ${item.name} only avaliable in ebook`, 'info');
-        } else if (item.quantity == item.stock) {
-          this.toast.show(`Book: ${item.name} not enough stock. Only ${item.quantity}`, 'info');
+        item.type = type;
+        if (type === 'ebook') {
+          item.quantity = 1;
+        } else {
+          item.quantity = Math.min(quantity, item.stock || 0);
+          if (item.quantity == 0) {
+            this.toast.show(`Book: ${item.name} only avaliable in ebook`, 'info');
+          } else if (item.quantity == item.stock) {
+            this.toast.show(`Book: ${item.name} not enough stock. Only ${item.quantity}`, 'info');
+          }
         }
       }
       this.saveCartToBackend(cartMethods.PUT, item);
@@ -209,7 +219,7 @@ export class CartService {
     };
 
     obsMap[action]().subscribe({
-      error: err => this.toast.show(`Cart sync failed, METHOD ${action} ${item.name}: ${err.error?.message}`, 'error')
+      //error: err => this.toast.show(`Cart sync failed, METHOD ${action} ${item.name}: ${err.error?.message}`, 'error')
     });
   }
 
@@ -220,10 +230,7 @@ export class CartService {
       type: item.type,
       quantity: item.quantity
     }))
-    this.http.put(`${API_ENDPOINTS.cart}/SetCart`, filteredCart).subscribe({
-      next: res => this.toast.show(`cart was bulk saved after merge`, 'success'),
-      error: err => this.toast.show(`cart wasn't bulk saved: ${err.error?.message}`, 'error'),
-    })
+    this.http.put(`${API_ENDPOINTS.cart}/SetCart`, filteredCart).subscribe({})
   }
 
   private updateTotals(cart: Cart) {
