@@ -70,8 +70,16 @@
         <p class="added-date">Added {{ formatDate(item.addedDate) }}</p>
 
         <div class="card-actions">
-          <button class="btn btn-primary" [disabled]="!isBookInStock(item)" (click)="addToCart(item)">Add to Cart</button>
-          <button class="btn btn-secondary" [routerLink]="['/books',item.book._id]">View Details</button>
+          <button
+            class="btn btn-primary"
+            [disabled]="!isBookInStock(item)"
+            (click)="addToCart(item)"
+          >
+            Move to Cart
+          </button>
+          <button class="btn btn-secondary" [routerLink]="['/books', item.book._id]">
+            View Details
+          </button>
         </div>
       </div>
     </div>
@@ -88,11 +96,6 @@
         searchTerm ? 'Try adjusting your search or filters' : 'Start adding books to your wishlist!'
       }}
     </p>
-    <button
-      class="btn btn-primary"
-      *ngIf="searchTerm"
-    >
-      Clear Filters
-    </button>
+    <button class="btn btn-primary" *ngIf="searchTerm">Clear Filters</button>
   </div>
 </div>

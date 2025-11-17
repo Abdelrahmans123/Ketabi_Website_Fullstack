@@ -19,20 +19,12 @@ export const AUTH_ROUTES: Routes = [
       import('./pages/register/register.component').then((m) => m.RegisterPageComponent),
     title: 'Register',
   },
-  //   {
-  //     path: 'forgot-password',
-  //     loadComponent: () =>
-  //       import('./pages/forgot-password-page/forgot-password-page.component').then(
-  //         (m) => m.ForgotPasswordPageComponent
-  //       ),
-  //     title: 'Forgot Password',
-  //   },
-  //   {
-  //     path: 'reset-password/:token',
-  //     loadComponent: () =>
-  //       import('./pages/reset-password-page/reset-password-page.component').then(
-  //         (m) => m.ResetPasswordPageComponent
-  //       ),
-  //     title: 'Reset Password',
-  //   },
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./pages/forgetPassword/forget-password.component').then(
+        (m) => m.ForgotPasswordComponent
+      ),
+    title: 'Forgot Password',
+  },
 ];

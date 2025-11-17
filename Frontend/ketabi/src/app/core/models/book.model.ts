@@ -1,3 +1,7 @@
+export interface Genre {
+  _id: string;
+  name: string;
+}
 export interface Book {
   _id: string;
   name: string;
@@ -5,7 +9,7 @@ export interface Book {
   category?: string;
   price: number;
   discount?: number;
-  image?: { url?: string };
+  image: { url: string };
   description: string;
   stock?: number;
   status: string;

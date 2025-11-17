@@ -19,7 +19,6 @@ import { AuthService } from '../../../../core/services/auth.service';
     CategoryCard,
     BookCard,
     ChatbotWidgetComponent,
-    RouterLink,
     ChatComponent,
   ],
   templateUrl: './home.component.html',

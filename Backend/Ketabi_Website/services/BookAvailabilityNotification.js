@@ -6,19 +6,16 @@ import { findAll, findById } from "../models/services/db.js";
 
 export const notifyBookBackInStock = async (bookId) => {
     const book = await findById({ model: Book, id: bookId });
-    console.log("🚀 ~ notifyBookBackInStock ~ book:", book);
     if (!book || book.status !== "in stock") {
         return;
     }
     const users = await findAll({
         model: User,
-        filter: { "wishlist.book": book._id }, 
+        filter: { "wishlist.book": book._id },
         select: "_id name",
     });
-    console.log("🚀 ~ notifyBookBackInStock ~ users:", users);
 
     if (!users || users.length === 0) {
-        console.log(`No users have book ${book.name} in their wishlist`);
         return;
     }
     const notificationPromises = users.map((user) =>

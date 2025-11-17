@@ -56,11 +56,12 @@ export class AuthService {
     console.log('Initial auth state:', this.isAuthenticatedSubject.value);
     console.log('Initial user:', this.currentUserSubject.value);
 
+    // IMPORTANT: Delay session validity check to prevent reload crashes
+    // This allows the page to fully load before running checks
+    this.checkSessionValidity();
+
     // Listen for storage events from other tabs
     this.listenToStorageEvents();
-
-    // Check if current session is still active
-    this.checkSessionValidity();
   }
 
   // ==========================================
@@ -79,54 +80,91 @@ export class AuthService {
   }
   getAdminId(): string | null {
     // Assuming admin ID is fixed; replace with actual logic if needed
-    return '690bc6cc694af80e288b9785';
+    return '68eb55652688714915d79019';
   }
   private listenToStorageEvents(): void {
+    // Only run in browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     window.addEventListener('storage', (event: StorageEvent) => {
-      console.log('🔔 Storage event detected:', {
-        key: event.key,
-        oldValue: event.oldValue?.substring(0, 50),
-        newValue: event.newValue?.substring(0, 50),
-        currentSessionId: this.currentSessionId,
-      });
+      try {
+        console.log('🔔 Storage event detected:', {
+          key: event.key,
+          oldValue: event.oldValue?.substring(0, 50),
+          newValue: event.newValue?.substring(0, 50),
+          currentSessionId: this.currentSessionId,
+        });
 
-      // IMPORTANT: Ignore storage events if we're currently logging in
-      // This prevents us from logging ourselves out during our own login process
-      if (this.isLoggingIn) {
-        console.log('⚪ Ignoring storage event - login in progress');
-        return;
-      }
+        // IMPORTANT: Ignore storage events if we're currently logging in
+        if (this.isLoggingIn) {
+          console.log('⚪ Ignoring storage event - login in progress');
+          return;
+        }
 
-      // Detect when active session changes in another tab
-      if (event.key === this.ACTIVE_SESSION_KEY) {
-        const newActiveSession = event.newValue;
-        const oldActiveSession = event.oldValue;
+        // Ignore events during page reload (within first 2 seconds)
+        const timeSinceInit = Date.now() - (this.initTime || Date.now());
+        if (timeSinceInit < 2000) {
+          console.log('⚪ Ignoring storage event - page just loaded');
+          return;
+        }
 
-        // If a NEW session is created (someone logged in on another tab)
-        // and this tab currently HAS a session, log out this tab
-        if (
-          newActiveSession &&
-          oldActiveSession &&
-          newActiveSession !== oldActiveSession &&
-          this.currentSessionId &&
-          this.currentSessionId === oldActiveSession
-        ) {
-          console.log('🔴 New login detected in another tab. Logging out this (old) tab.');
-          console.log('My session:', this.currentSessionId);
-          console.log('Old session:', oldActiveSession);
-          console.log('New session:', newActiveSession);
+        // Detect when active session changes in another tab
+        if (event.key === this.ACTIVE_SESSION_KEY) {
+          const newActiveSession = event.newValue;
+          const oldActiveSession = event.oldValue;
+
+          // Only process if both old and new sessions exist
+          if (!newActiveSession || !oldActiveSession) {
+            return;
+          }
+
+          // If a NEW session is created and this tab has an OLD session
+          if (
+            newActiveSession !== oldActiveSession &&
+            this.currentSessionId &&
+            this.currentSessionId === oldActiveSession
+          ) {
+            console.log('🔴 New login detected in another tab.');
+            console.log('My session:', this.currentSessionId);
+            console.log('Old session:', oldActiveSession);
+            console.log('New session:', newActiveSession);
+
+            // Check if it's the same user before logging out
+            try {
+              const token = localStorage.getItem(this.TOKEN_KEY);
+              if (token) {
+                const decoded: any = jwtDecode(token);
+                const currentUserId = decoded._id || decoded.id || decoded.userId || decoded.sub;
+
+                // For now, allow same user multiple sessions
+                // Uncomment below to enforce single session per user
+                // this.handleForcedLogout();
+
+                console.log('✅ Same user detected, allowing multiple sessions');
+              }
+            } catch (error) {
+              console.error('Error checking user ID:', error);
+            }
+          }
+        }
+
+        // Detect when tokens are removed (logout in another tab)
+        if (event.key === this.TOKEN_KEY && event.oldValue && !event.newValue) {
+          console.log('🔴 Logout detected in another tab.');
           this.handleForcedLogout();
         }
-      }
-
-      // Detect when tokens are removed (logout in another tab)
-      // Only trigger if token is REMOVED (not updated)
-      if (event.key === this.TOKEN_KEY && event.oldValue && !event.newValue) {
-        console.log('🔴 Logout detected in another tab.');
-        this.handleForcedLogout();
+      } catch (error) {
+        console.error('❌ Error in storage event listener:', error);
+        // Don't crash - just log the error
       }
     });
   }
+  private initTime = Date.now();
+
+  // Make handleForcedLogout safer
+
   // Add this method to your AuthService class
 
   getCurrentUserRole(): string | null {
@@ -139,43 +177,75 @@ export class AuthService {
     return null;
   }
   private checkSessionValidity(): void {
-    // Don't check if we're currently logging in
-    if (this.isLoggingIn) {
-      console.log('⚪ Skipping session check - login in progress');
-      return;
-    }
+    try {
+      // Don't check if we're currently logging in
+      if (this.isLoggingIn) {
+        console.log('⚪ Skipping session check - login in progress');
+        return;
+      }
 
-    const activeSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
-    const storedSessionId = localStorage.getItem(this.SESSION_ID_KEY);
-    const token = localStorage.getItem(this.TOKEN_KEY);
+      const activeSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
+      const storedSessionId = localStorage.getItem(this.SESSION_ID_KEY);
+      const token = localStorage.getItem(this.TOKEN_KEY);
 
-    console.log('🔍 Checking session validity:', {
-      activeSession,
-      storedSessionId,
-      hasToken: !!token,
-      currentSessionId: this.currentSessionId,
-      isLoggingIn: this.isLoggingIn,
-    });
+      console.log('🔍 Checking session validity:', {
+        activeSession,
+        storedSessionId,
+        hasToken: !!token,
+        currentSessionId: this.currentSessionId,
+        isLoggingIn: this.isLoggingIn,
+      });
 
-    // Set current session ID if it exists
-    if (storedSessionId) {
-      this.currentSessionId = storedSessionId;
-    }
+      // Set current session ID if it exists
+      if (storedSessionId) {
+        this.currentSessionId = storedSessionId;
+      }
 
-    // Only check validity if we have a stored session and token
-    // If there's no token, this is likely a fresh page load before login
-    if (!token || !storedSessionId) {
-      console.log('⚪ No existing session found - fresh start');
-      return;
-    }
+      // Only check validity if we have a stored session and token
+      // If there's no token, this is likely a fresh page load before login
+      if (!token || !storedSessionId) {
+        console.log('⚪ No existing session found - fresh start');
+        return;
+      }
 
-    // If there's an active session and it's different from ours,
-    // it means we're an old session that needs to be logged out
-    if (activeSession && storedSessionId && activeSession !== storedSessionId) {
-      console.log('🔴 A newer session exists. Logging out this old session.');
-      this.handleForcedLogout();
-    } else {
-      console.log('✅ Session is valid and active');
+      // Verify token is not expired
+      if (!this.hasValidToken()) {
+        console.log('⚠️ Token expired on reload');
+        this.clearAuthData();
+        return;
+      }
+
+      // If there's an active session and it's different from ours,
+      // only log out if we're in a browser environment (not during SSR)
+      if (
+        typeof window !== 'undefined' &&
+        activeSession &&
+        storedSessionId &&
+        activeSession !== storedSessionId
+      ) {
+        console.log('🔴 A newer session exists. Checking if same user...');
+
+        try {
+          // Get current user from token
+          const currentUser = this.getUserFromToken();
+
+          if (currentUser) {
+            console.log('✅ Valid session found for user:', currentUser.name);
+            // Update the session to current one if valid
+            this.currentSessionId = storedSessionId;
+            localStorage.setItem(this.ACTIVE_SESSION_KEY, storedSessionId);
+          } else {
+            console.log('⚠️ Could not verify user from token');
+          }
+        } catch (error) {
+          console.error('Error verifying session:', error);
+        }
+      } else {
+        console.log('✅ Session is valid and active');
+      }
+    } catch (error) {
+      console.error('❌ Error in checkSessionValidity:', error);
+      // Don't crash - just log the error
     }
   }
   private handleForcedLogout(): void {
@@ -368,29 +438,33 @@ export class AuthService {
   // ==========================================
 
   clearAuthData(): void {
-    console.log('🔵 Clearing auth data');
+    try {
+      console.log('🔵 Clearing auth data');
 
-    // Get current active session before clearing
-    const currentActiveSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
+      // Get current active session before clearing
+      const currentActiveSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
 
-    // Clear tokens and session ID
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    localStorage.removeItem(this.SESSION_ID_KEY);
+      // Clear tokens and session ID
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+      localStorage.removeItem(this.SESSION_ID_KEY);
 
-    // Only clear activeSession if it belongs to this tab
-    // This prevents clearing when we're just a passive logout (forced by another tab)
-    if (currentActiveSession === this.currentSessionId) {
-      localStorage.removeItem(this.ACTIVE_SESSION_KEY);
-      console.log('✅ Cleared active session (was mine)');
-    } else {
-      console.log('⚪ Kept active session (belongs to another tab)');
+      // Only clear activeSession if it belongs to this tab
+      if (currentActiveSession === this.currentSessionId) {
+        localStorage.removeItem(this.ACTIVE_SESSION_KEY);
+        console.log('✅ Cleared active session (was mine)');
+      } else {
+        console.log('⚪ Kept active session (belongs to another tab)');
+      }
+
+      this.currentSessionId = null;
+      this.currentUserSubject.next(null);
+      this.isAuthenticatedSubject.next(false);
+      this.hasLogOutSubject.next(true);
+      console.log('✅ Auth data cleared');
+    } catch (error) {
+      console.error('❌ Error clearing auth data:', error);
     }
-
-    this.currentSessionId = null;
-    this.currentUserSubject.next(null);
-    this.isAuthenticatedSubject.next(false);
-    console.log('✅ Auth data cleared');
   }
 
   // ==========================================
@@ -557,12 +631,10 @@ export class AuthService {
       .pipe(
         tap(() => {
           this.clearAuthData();
-          this.hasLogOutSubject.next(true);
           this.router.navigate(['/auth/login']);
         }),
         catchError((error) => {
           this.clearAuthData();
-          this.hasLogOutSubject.next(true);
           this.router.navigate(['/auth/login']);
           return throwError(() => error);
         })
@@ -571,13 +643,17 @@ export class AuthService {
 
   forgotPassword(data: ForgotPasswordRequest): Observable<any> {
     return this.http
-      .post(`${this.API_URL}${API_ENDPOINTS.AUTH.FORGOT_PASSWORD}`, data)
+      .post(`${this.API_URL}${API_ENDPOINTS.AUTH.FORGOT_PASSWORD}`, data, {
+        withCredentials: true,
+      })
       .pipe(catchError(this.handleError.bind(this)));
   }
 
   resetPassword(data: ResetPasswordRequest): Observable<any> {
     return this.http
-      .post(`${this.API_URL}${API_ENDPOINTS.AUTH.RESET_PASSWORD}`, data)
+      .post(`${this.API_URL}${API_ENDPOINTS.AUTH.RESET_PASSWORD}`, data, {
+        withCredentials: true,
+      })
       .pipe(catchError(this.handleError.bind(this)));
   }
   setRefreshToken(token: string): void {
@@ -633,7 +709,7 @@ export class AuthService {
 
     switch (role) {
       case 'admin':
-        this.router.navigate(['/dashboard/admin']);
+        this.router.navigate(['/admin/dashboard']);
         break;
       case 'publisher':
         this.router.navigate(['/dashboard/publisher']);

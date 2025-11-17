@@ -32,7 +32,7 @@
     <div *ngFor="let book of paginatedBooks" class="book-card">
       <!-- Book Cover -->
       <div class="book-cover">
-        <img *ngIf="book.image?.url" [src]="book.image?.url || 'assets/images/book-placeholder.png'" [alt]="book.name" class="book-image" />
+             <img [src]="book.image?.url || 'default-book.jpg'" [alt]="book.name" class="book-image" />
         <!-- PDF Badge -->
         <span *ngIf="book.pdf?.url" class="pdf-badge">
           <i class="fas fa-file-pdf"></i> PDF
