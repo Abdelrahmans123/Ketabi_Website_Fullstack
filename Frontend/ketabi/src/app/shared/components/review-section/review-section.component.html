@@ -15,7 +15,7 @@
             <div *ngFor="let review of reviews" class="review-card">
                 <div class="review-header">
                     <div class="reviewer-info">
-                        <span class="reviewer-name">{{ review.user.name || 'Anonymous' }}</span>
+                        <span class="reviewer-name">{{ review.user?.name || 'Anonymous' }}</span>
                         <span class="review-date">{{ formatDate(review.createdAt) }}</span>
                     </div>
                     <div class="rating-display">
