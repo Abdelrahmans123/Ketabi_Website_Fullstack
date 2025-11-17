@@ -47,8 +47,6 @@ const orderSchema = new mongoose.Schema({
     shippingAddress: {
         street: { type: String },
         city: { type: String },
-        postalCode: { type: String },
-        country: { type: String },
         phoneNumber: { type: String },
     },
     transactionId: { type: String },
@@ -75,7 +73,6 @@ const Counter = mongoose.model('Counter', counterSchema);
 
 // Pre-save hooks
 orderSchema.pre('save', async function (next) {
-    console.log('order number: ', this.orderNumber);
     // Generate order number
     if (!this.orderNumber || this.orderNumber === '') {
         try {

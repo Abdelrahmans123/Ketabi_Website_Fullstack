@@ -43,8 +43,6 @@ export const createOrderSchema = Joi.object({
   shippingAddress: Joi.object({
     street: Joi.string(),
     city: Joi.string(),
-    postalCode: Joi.string(),
-    country: Joi.string(),
     phoneNumber: Joi.string(),
   })
     .optional()
@@ -53,7 +51,7 @@ export const createOrderSchema = Joi.object({
       const hasPhysicalBook = items?.some((item) => item.type === itemType.PHYSICAL);
 
       if (hasPhysicalBook) {
-        if (!value.street || !value.city || !value.postalCode || !value.country || !value.phoneNumber) {
+        if (!value.street || !value.city || !value.phoneNumber) {
           return helpers.error('any.custom', {
             message: 'All shipping address fields are required for physical book orders',
           });
@@ -113,7 +111,6 @@ export const getAllOrdersSchema = Joi.object({
 });
 
 export const getUserOrderSchema = Joi.object({
-  user: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({ 'string.pattern.base': 'Invalid User ID', }),
   page: Joi.number().integer().min(1).default(1).messages({'number.min': 'Page must be at least 1','number.integer': 'Page must be an integer',}),
   limit: Joi.number().integer().min(1).max(100).default(10).messages({
       'number.min': 'Limit must be at least 1',
