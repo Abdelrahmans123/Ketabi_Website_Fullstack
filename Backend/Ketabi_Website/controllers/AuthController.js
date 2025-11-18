@@ -299,6 +299,7 @@ export const registerWithFacebook = asyncHandler(async (req, res, next) => {
 export const confirmEmail = asyncHandler(async (req, res, next) => {
     const { otp } = req.body;
     const userId = req.session.userId;
+    console.log("session stuff: ",req.session);
     if (!userId) {
         const error = new AppError("Session expired, please login again", 401);
         return next(error);
