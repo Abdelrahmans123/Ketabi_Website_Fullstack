@@ -104,11 +104,6 @@ try {
         (async () => {
             try {
                 const order = await Order.findOne({ orderNumber });
-	         if (!order) {
-  console.log('Order not found for orderNumber:', orderNumber);
-  return;
-}                
-
 switch (event.type) {
                     case "payment_intent.succeeded":
                         await handleSuccessfulPayment(order, paymentIntent);
