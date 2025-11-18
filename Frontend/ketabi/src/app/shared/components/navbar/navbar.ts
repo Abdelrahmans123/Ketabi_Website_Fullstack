@@ -9,11 +9,7 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import {
-  NotificationPayload,
-  SocketService,
-  SystemMessage,
-} from '../../../core/services/socket.service';
+import { NotificationPayload, SocketService } from '../../../core/services/socket.service';
 
 @Component({
   selector: 'app-navbar',
@@ -31,6 +27,7 @@ export class Navbar implements OnInit, OnDestroy {
   showNotifications = false;
   private authSubscription?: Subscription;
   private socketSub?: Subscription;
+  private connectionSub?: Subscription;
 
   constructor(
     private authService: AuthService,
@@ -70,14 +67,15 @@ export class Navbar implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     console.log('🧹 Navbar destroying, cleaning up subscriptions');
-    // Clean up all subscriptions
     if (this.authSubscription) {
       this.authSubscription.unsubscribe();
+    }
+    if (this.connectionSub) {
+      this.connectionSub.unsubscribe();
     }
     this.cleanupSocketNotifications();
   }
 
-  // Check initial authentication status
   private checkAuthStatus() {
     this.isLoggedIn = this.authService.isAuthenticated();
     console.log('🔍 Initial auth check:', this.isLoggedIn);
@@ -88,58 +86,97 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
-  // Setup socket notification subscription
   private setupSocketNotifications() {
-    // Cleanup existing subscription first
-    this.cleanupSocketNotifications();
+    // Only setup if not already subscribed
+    if (this.socketSub && !this.socketSub.closed) {
+      console.log('⚠️ Already subscribed to notifications, skipping setup');
+      return;
+    }
 
     console.log('🔌 Setting up socket notifications subscription');
+    this.subscribeToNotifications();
 
-    // Subscribe ONLY to socket notifications (not toast notifications)
+    // Monitor connection status
+    if (!this.connectionSub || this.connectionSub.closed) {
+      this.connectionSub = this.socketService.connectionStatus$.subscribe({
+        next: (isConnected) => {
+          console.log('🔌 Socket connection status changed:', isConnected);
+          if (isConnected && (!this.socketSub || this.socketSub.closed)) {
+            console.log('✅ Socket reconnected, re-subscribing to notifications');
+            this.subscribeToNotifications();
+          }
+        },
+        error: (err) => {
+          console.error('❌ Connection status error:', err);
+        },
+      });
+    }
+  }
+
+  private subscribeToNotifications() {
+    // Cleanup existing subscription first
+    if (this.socketSub) {
+      console.log('🧹 Cleaning up existing notification subscription');
+      this.socketSub.unsubscribe();
+      this.socketSub = undefined;
+    }
+    console.log('👂 Subscribing to socket notifications');
+
     this.socketSub = this.socketService.notifications$.subscribe({
       next: (notif) => {
+        console.log('🚀 ~ Navbar ~ subscribeToNotifications ~ notif:', notif);
         if (!notif) {
           console.log('⚠️ Received null notification');
           return;
         }
-        console.log('📬 Socket notification received:', notif);
 
-        const messageText = notif.title || notif.content || '';
+        console.log('🎉 📬 NOTIFICATION RECEIVED IN NAVBAR:', notif);
+        console.log('📊 Notification details:', {
+          id: notif._id,
+          type: notif.type,
+          title: notif.title,
+          content: notif.content,
+          userId: notif.userId,
+        });
 
-        // Add to notification list (this will show in dropdown)
+        const messageText = notif.title || notif.content || notif.message || 'New notification';
+
+        // Add to notification list (at the beginning)
         this.notifications.unshift({
           ...notif,
           message: messageText,
-          timestamp: notif.createdAt || new Date().toISOString(),
-        } as any);
+          timestamp: notif.createdAt || notif.timestamp || new Date().toISOString(),
+        });
 
         // Increment count
-        this.notificationCount = this.notificationCount + 1;
+        this.notificationCount++;
+        console.log('🔔 Updated notification count:', this.notificationCount);
+        console.log('📋 Total notifications in list:', this.notifications.length);
 
-        // Show toast notification (but DON'T add to list again)
+        // Show toast notification
         this.notificationService.info(messageText, 4000);
       },
       error: (err) => {
-        console.error('❌ Socket notification error:', err);
+        console.error('❌ Socket notification subscription error:', err);
+      },
+      complete: () => {
+        console.log('⚠️ Notification subscription completed (should not happen)');
       },
     });
 
     console.log('✅ Socket notifications subscription active');
   }
 
-  // Cleanup socket subscription
   private cleanupSocketNotifications() {
     if (this.socketSub) {
       console.log('🧹 Cleaning up socket subscription');
       this.socketSub.unsubscribe();
       this.socketSub = undefined;
     }
-    // Clear notifications on logout
     this.notifications = [];
     this.notificationCount = 0;
   }
 
-  // Handle logout
   logout() {
     console.log('🚪 Logging out');
     this.authService.logout().subscribe({
@@ -154,15 +191,19 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   notificationsClicked() {
-    console.log('🔔 Notifications clicked, current count:', this.notificationCount);
+    console.log('🔔 Notifications clicked');
+    console.log('📊 Current count:', this.notificationCount);
+    console.log('📋 Total notifications:', this.notifications.length);
+
     // Toggle dropdown
     this.showNotifications = !this.showNotifications;
+
     // If opening, mark all as read (clear count)
     if (this.showNotifications) {
+      console.log('📖 Marking notifications as read');
       this.notificationCount = 0;
     }
   }
-  // Add these methods to your Navbar component
 
   getNotificationClass(type: string): string {
     const typeMap: { [key: string]: string } = {
@@ -210,12 +251,26 @@ export class Navbar implements OnInit, OnDestroy {
     this.notificationCount = 0;
   }
 
-  ordersComponentRouter(){
+  ordersComponentRouter() {
     const role = this.authService.getUserRole();
     if (role === 'user' || role === 'admin') {
       this.router.navigate(['/my-orders']);
-    } else if (role === 'publisher'){
-      this.router.navigate(['/orders'])
+    } else if (role === 'publisher') {
+      this.router.navigate(['/orders']);
     }
+  }
+
+  // Debug method - call this to check notification system status
+  debugNotificationSystem() {
+    console.log('🐛 === NOTIFICATION SYSTEM DEBUG ===');
+    console.log('Socket connected:', this.socketService.isConnected());
+    console.log('Current user:', this.currentUser);
+    console.log('User ID:', this.currentUser?._id || this.currentUser?.id);
+    console.log('Is logged in:', this.isLoggedIn);
+    console.log('Socket subscription active:', !!this.socketSub);
+    console.log('Connection subscription active:', !!this.connectionSub);
+    console.log('Notification count:', this.notificationCount);
+    console.log('Total notifications:', this.notifications.length);
+    console.log('🐛 === END DEBUG ===');
   }
 }

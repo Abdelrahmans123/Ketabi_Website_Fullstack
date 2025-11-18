@@ -40,7 +40,7 @@
       <div class="col-lg-3 col-md-6" *ngFor="let book of books; let i = index" [hidden]="i >= 8">
         <app-book-card
           [book]="book"
-          [image]="book.image?.url || 'default-book.jpg'"
+          [image]="book.image.url || 'default-book.jpg'"
           [title]="book.name"
           [author]="book.author"
           [price]="book.price"
