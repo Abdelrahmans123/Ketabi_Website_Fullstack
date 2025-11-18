@@ -27,14 +27,13 @@ export interface TypingStatus {
   isTyping: boolean;
 }
 
-// Notification payload emitted from server (stored Notification document)
 export interface NotificationPayload {
   _id?: string;
   userId?: string;
   type?: string;
   title?: string;
   content?: string;
-  message?: string; // Added for compatibility
+  message?: string;
   data?: {
     bookId?: string;
     bookName?: string;
@@ -46,10 +45,10 @@ export interface NotificationPayload {
     savings?: number;
     stock?: number;
     coverImage?: string;
-    [key: string]: any; // Allow other properties
+    [key: string]: any;
   };
   createdAt?: string;
-  timestamp?: string; // Added for compatibility
+  timestamp?: string;
   isRead?: boolean;
   priority?: string;
 }
@@ -83,7 +82,10 @@ export class SocketService {
   }
 
   connect(serverUrl: string, token: string): void {
-    console.log('🔌 Attempting to connect socket to:', serverUrl);
+    console.log('🔌 ========== SOCKET CONNECTION ATTEMPT ==========');
+    console.log('🔌 Server URL:', serverUrl);
+    console.log('🔌 Token exists:', !!token);
+    console.log('🔌 Token preview:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
 
     if (!token) {
       console.error('❌ No token provided for socket connection');
@@ -97,30 +99,65 @@ export class SocketService {
       this.socket.disconnect();
     }
 
+    console.log('🔌 Creating new socket instance...');
+
     this.socket = io(serverUrl, {
       extraHeaders: {
         authtoken: `Bearer ${token}`,
       },
-      reconnection: true,
-      reconnectionAttempts: 3,
-      reconnectionDelay: 1000,
     });
 
     console.log('🔌 Socket instance created, setting up listeners');
     this.setupSocketListeners();
+
+    console.log('🔌 ========== END CONNECTION ATTEMPT ==========');
   }
 
   private setupSocketListeners(): void {
     console.log('🎧 Setting up socket listeners');
 
     this.socket.on('connect', () => {
-      console.log('✅ Socket connected! Socket ID:', this.socket.id);
+      console.log('✅ ========== SOCKET CONNECTED ==========');
+      console.log('✅ Socket ID:', this.socket.id);
+      console.log('✅ Transport:', this.socket.io.engine.transport.name);
+      console.log('✅ ========================================');
       this.connectionStatus.next(true);
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected. Reason:', reason);
+      console.log('❌ ========== SOCKET DISCONNECTED ==========');
+      console.log('❌ Reason:', reason);
+      console.log('❌ Socket ID was:', this.socket.id);
+      console.log('❌ ==========================================');
       this.connectionStatus.next(false);
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('❌ ========== SOCKET CONNECTION ERROR ==========');
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Full error:', error);
+      console.error('❌ ==============================================');
+      this.errorSubject.next({ message: error.message });
+      this.connectionStatus.next(false);
+    });
+
+    this.socket.on('connect_timeout', () => {
+      console.error('❌ Socket connection timeout');
+      this.connectionStatus.next(false);
+    });
+
+    this.socket.io.on('reconnect_attempt', (attempt) => {
+      console.log(`🔄 Reconnection attempt ${attempt}`);
+    });
+
+    this.socket.io.on('reconnect_failed', () => {
+      console.error('❌ All reconnection attempts failed');
+      this.connectionStatus.next(false);
+    });
+
+    this.socket.io.on('reconnect', (attempt) => {
+      console.log(`✅ Reconnected after ${attempt} attempts`);
+      this.connectionStatus.next(true);
     });
 
     this.socket.on('newMessage', (data: Message) => {
@@ -159,23 +196,16 @@ export class SocketService {
       this.systemMessageSubject.next(data);
     });
 
-    // Server-side business notifications (persisted)
     this.socket.on('notification', (data: NotificationPayload) => {
-      console.log('🔔 NOTIFICATION RECEIVED:', data);
-      console.log('🔔 Notification details:', {
-        id: data._id,
-        userId: data.userId,
-        type: data.type,
-        title: data.title,
-        content: data.content,
-      });
+      console.log('🔔 ========== NOTIFICATION RECEIVED ==========');
+      console.log('🔔 Notification ID:', data._id);
+      console.log('🔔 User ID:', data.userId);
+      console.log('🔔 Type:', data.type);
+      console.log('🔔 Title:', data.title);
+      console.log('🔔 Content:', data.content);
+      console.log('🔔 Full data:', data);
+      console.log('🔔 ============================================');
       this.notificationSubject.next(data);
-      console.log('✅ Notification emitted to subscribers');
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('❌ Socket connection error:', error);
-      this.errorSubject.next({ message: error.message });
     });
 
     this.socket.on('error', (data: { message?: string } | string) => {
@@ -196,8 +226,14 @@ export class SocketService {
   }
 
   register(info: string) {
-    console.log('📝 Registering with info:', info);
-    this.socket.emit('register', info);
+    console.log('📝 Register called with:', info);
+    console.log('📝 Socket connected:', this.socket?.connected);
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('register', info);
+      console.log('📝 Register event emitted');
+    } else {
+      console.error('❌ Cannot register - socket not connected');
+    }
   }
 
   sendMessage(recipientId: string, content: string): void {
@@ -227,8 +263,21 @@ export class SocketService {
     }
   }
 
-  // Helper method to check if socket is connected
   isConnected(): boolean {
-    return this.socket?.connected || false;
+    const connected = this.socket?.connected || false;
+    console.log('🔍 Socket connection check:', connected);
+    return connected;
+  }
+
+  // Debug method to get socket state
+  getDebugInfo(): any {
+    return {
+      socketExists: !!this.socket,
+      connected: this.socket?.connected,
+      id: this.socket?.id,
+      active: this.socket?.active,
+      disconnected: this.socket?.disconnected,
+      transport: this.socket?.io?.engine?.transport?.name,
+    };
   }
 }

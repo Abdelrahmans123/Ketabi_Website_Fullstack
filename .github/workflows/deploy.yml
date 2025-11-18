@@ -1,0 +1,40 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - dev   # change to your branch (main/dev)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start ssh-agent and add key
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Run remote deploy script
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          TARGET_BRANCH: ${{ secrets.TARGET_BRANCH }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+        run: |
+          echo "Running remote deploy..."
+          ssh -o StrictHostKeyChecking=yes -p $SSH_PORT $SSH_USER@$SSH_HOST "bash -s" -- "$TARGET_BRANCH" <<'REMOTE'
+            set -euo pipefail
+            cd "$DEPLOY_DIR" || exit 1
+            # If you want to run the central script:
+            /home/deploy/deploy.sh "$TARGET_BRANCH"
+REMOTE
