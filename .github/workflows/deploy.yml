@@ -3,13 +3,13 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - dev
+      - dev   # change to your branch if needed
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Start ssh-agent and add key
@@ -32,8 +32,4 @@ jobs:
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
         run: |
           echo "Running remote deploy..."
-          ssh -o StrictHostKeyChecking=yes -p $SSH_PORT $SSH_USER@$SSH_HOST << EOF
-            set -euo pipefail
-            cd "$DEPLOY_DIR" || exit 1
-            /home/deploy/deploy.sh "$TARGET_BRANCH"
-EOF
+          ssh -o StrictHostKeyChecking=yes -p $SSH_PORT $SSH_USER@$SSH_HOST "cd $DEPLOY_DIR && /home/deploy/deploy.sh $TARGET_BRANCH"
