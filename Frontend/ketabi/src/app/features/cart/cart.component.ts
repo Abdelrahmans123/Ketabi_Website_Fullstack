@@ -167,7 +167,6 @@ export class CartComponent implements OnInit {
       return;
     }
 
-    console.log('Order payload:', orderPayload);
     this.couponCode='';
     this.couponService.resetCoupon();
 

@@ -38,4 +38,12 @@ export const ADMIN_ROUTES: Routes = [
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['admin'] },
   },
+  {
+    path: 'orders',
+    loadComponent: () =>
+      import('./components/orders/orders.component').then((m) => m.OrdersComponent),
+    title: 'Order Management',
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['admin'] },
+  },
 ];

@@ -4,6 +4,7 @@ import {
     findByIdAndUpdate,
     findAll,
     create,
+    findOneAndUpdate,
 } from "../models/services/db.js";
 import User from "../models/User.js";
 import Book from "../models/Book.js";
@@ -294,5 +295,120 @@ export const getResponses = asyncHandler(async (req, res, next) => {
         statusCode: 200,
         message: "User responses retrieved successfully",
         data: responses,
+    });
+});
+export const getAllResponses = asyncHandler(async (req, res, next) => {
+    const responses = await findAll({
+        model: Response,
+        sort: { createdAt: -1 },
+        populate: { path: "userId", select: "name email" },
+    });
+    if (!responses || responses.length === 0) {
+        return next(new AppError("No responses found", 404));
+    }
+    return successResponse({
+        res,
+        statusCode: 200,
+        message:
+            responses.length > 0
+                ? "All user responses retrieved successfully"
+                : "No responses found",
+        data: responses || [], // Ensure we always return an array
+    });
+});
+export const updateResponse = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ["pending", "approved", "rejected"];
+    if (!validStatuses.includes(status)) {
+        return next(
+            new AppError(
+                `Invalid status. Valid statuses are: ${validStatuses.join(
+                    ", "
+                )}`,
+                400
+            )
+        );
+    }
+
+    // Find and populate the response
+    const response = await Response.findById(id).populate({
+        path: "userId",
+        select: "name email role phone",
+    });
+
+    if (!response) {
+        return next(new AppError("Response not found", 404));
+    }
+
+    // Update response status
+    response.status = status;
+    await response.save();
+
+    // Handle user role update on approval
+    if (status === "approved") {
+        // Option 1: Use findByIdAndUpdate with runValidators: false
+        await User.findByIdAndUpdate(
+            response.userId._id || response.userId,
+            { role: "publisher" },
+            {
+                runValidators: false, // Skip validation - we're only updating role
+                new: true,
+            }
+        );
+
+        // Send notification
+        await sendNotification({
+            userId: response.userId._id || response.userId,
+            type: notificationType.RESPONSE_APPROVED,
+            title: "Publisher Request Approved",
+            content:
+                "Congratulations! Your request to become a publisher has been approved.",
+            data: {
+                responseId: response._id,
+                updatedAt: new Date(),
+            },
+        });
+    } else if (status === "rejected") {
+        // Optional: Send rejection notification
+        await sendNotification({
+            userId: response.userId._id || response.userId,
+            type: notificationType.RESPONSE_REJECTED,
+            title: "Publisher Request Update",
+            content:
+                "Your publisher request has been reviewed. Please check your request status for more details.",
+            data: {
+                responseId: response._id,
+                updatedAt: new Date(),
+            },
+        });
+    }
+
+    // Return updated response with populated user data
+    const updatedResponse = await Response.findById(id).populate({
+        path: "userId",
+        select: "name email role phone",
+    });
+
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: `Response ${status} successfully`,
+        data: updatedResponse,
+    });
+});
+export const deleteResponse = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const response = await Response.findById(id);
+    if (!response) {
+        return next(new AppError("Response not found", 404));
+    }
+    await Response.findByIdAndDelete(id);
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "Response deleted successfully",
+        data: null,
     });
 });

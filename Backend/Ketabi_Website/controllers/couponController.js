@@ -139,9 +139,6 @@ export const editCoupon = asyncHandler(async (req, res, next) => {
 
     const noChanges = Object.entries(CouponData).every(([key, value]) => {
         const originalValue = coupon[key];
-        console.log("Value: ", value);
-        console.log("originalValue: ", originalValue);
-
         if (originalValue instanceof Date) {
             return new Date(originalValue).getTime() === new Date(value).getTime();
         }

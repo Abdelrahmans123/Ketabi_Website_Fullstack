@@ -26,15 +26,31 @@ export class ProfileComponent implements OnInit {
   address: Address = { street: '', city: '' };
   avatarUrl = '';
 
-  constructor(
-    private profileService: ProfileService,
-    private toast: ToastService
-  ) {}
+  constructor(private profileService: ProfileService, private toast: ToastService) {}
 
   ngOnInit(): void {
     this.loadProfile();
   }
-
+  convertToPublisher(): void {
+    this.profileService.convertToPublisher().subscribe({
+      next: () => {
+        this.toast.show(
+          'Request approved! Please log in again to access publisher features.',
+          'success'
+        );
+        setTimeout(() => {
+          localStorage.removeItem('token'); 
+          sessionStorage.clear();
+          window.location.href = '/auth/login';
+        }, 2000);
+      },
+      error: (err) => {
+        const errorMsg = err.error?.message || 'Failed to send convert to publisher request.';
+        console.error('Failed to send convert to publisher request:', err);
+        this.toast.show(errorMsg, 'error');
+      },
+    });
+  }
   loadProfile(): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -74,18 +90,18 @@ export class ProfileComponent implements OnInit {
         const firstAddress = this.profile.address[0];
         // Check if firstAddress is not null/undefined
         if (firstAddress && typeof firstAddress === 'object') {
-          this.address = { 
-            street: firstAddress.street || '', 
-            city: firstAddress.city || '' 
+          this.address = {
+            street: firstAddress.street || '',
+            city: firstAddress.city || '',
           };
         } else {
           this.address = { street: '', city: '' };
         }
       } else if (typeof this.profile.address === 'object' && !Array.isArray(this.profile.address)) {
         const addr = this.profile.address as Address;
-        this.address = { 
-          street: addr?.street || '', 
-          city: addr?.city || '' 
+        this.address = {
+          street: addr?.street || '',
+          city: addr?.city || '',
         };
       } else {
         this.address = { street: '', city: '' };
@@ -128,7 +144,7 @@ export class ProfileComponent implements OnInit {
         this.isEditing = false;
         this.isSaving = false;
         this.toast.show('Profile updated successfully!', 'success');
-        
+
         // Reload profile to get updated data
         this.loadProfile();
       },
@@ -171,7 +187,7 @@ export class ProfileComponent implements OnInit {
 
   getDisplayAddress(): string {
     if (!this.profile?.address) return 'Not provided';
-    
+
     if (Array.isArray(this.profile.address)) {
       if (this.profile.address.length === 0) return 'Not provided';
       const addr = this.profile.address[0];
@@ -182,7 +198,7 @@ export class ProfileComponent implements OnInit {
       if (!street && !city) return 'Not provided';
       return street && city ? `${street}, ${city}` : street || city;
     }
-    
+
     // Handle single address object
     if (typeof this.profile.address === 'object' && !Array.isArray(this.profile.address)) {
       const addr = this.profile.address as Address;
@@ -192,8 +208,7 @@ export class ProfileComponent implements OnInit {
       if (!street && !city) return 'Not provided';
       return street && city ? `${street}, ${city}` : street || city;
     }
-    
+
     return 'Not provided';
   }
 }
-

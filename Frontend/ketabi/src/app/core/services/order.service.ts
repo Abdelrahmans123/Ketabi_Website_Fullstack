@@ -12,7 +12,7 @@ import { AuthService } from './auth.service';
 export class OrderService {
   private readonly base_url = `${API_ENDPOINTS.order}`;
   private readonly base_url_library = `${API_ENDPOINTS.profile}`;
-  constructor(private http: HttpClient, private authService: AuthService) { }
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   createOrder(payload: any): Observable<any> {
     return this.http.post(`${this.base_url}`, payload);
@@ -22,11 +22,11 @@ export class OrderService {
     const token = this.authService.getAccessToken();
 
     const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     });
 
     return this.http.get(`${this.base_url_library}/library`, {
-      headers
+      headers,
     });
   }
 
@@ -35,7 +35,6 @@ export class OrderService {
   }
 
   getOrderDetails(orderId: string): Observable<any> {
-    console.log('info: ',`${this.base_url}/order/${orderId}`);
     return this.http.get(`${this.base_url}/order/${orderId}`);
   }
 
@@ -44,8 +43,21 @@ export class OrderService {
     return this.http.get(`${this.base_url}`, {
       params: {
         page: page.toString(),
-        limit: limit.toString()
-      }
+        limit: limit.toString(),
+      },
     });
+  }
+  // Add these methods to your order.service.ts:
+
+  updateOrderStatus(orderId: string, status: string): Observable<any> {
+    return this.http.patch(`${this.base_url}/${orderId}/status`, { status });
+  }
+
+  deleteOrder(orderId: string): Observable<any> {
+    return this.http.delete(`${this.base_url}/${orderId}`);
+  }
+
+  updateOrder(orderId: string, orderData: any): Observable<any> {
+    return this.http.put(`${this.base_url}/${orderId}`, orderData);
   }
 }

@@ -9,6 +9,7 @@ export const defineCors = (app) => {
                 callback(new Error("Not allowed by CORS"));
             }
         },
+        // origin: "*",
         credentials: true,
     };
     app.use(cors(corsOptions));

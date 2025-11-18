@@ -37,7 +37,7 @@ export const sendTelegram = async ({ chatId, otp }) => {
             disable_web_page_preview: true,
         });
 
-        console.log("✅ Telegram OTP sent successfully:", {
+        console.log("Telegram OTP sent successfully:", {
             messageId: response.message_id,
             chatId: response.chat.id,
             timestamp: new Date(response.date * 1000).toISOString(),

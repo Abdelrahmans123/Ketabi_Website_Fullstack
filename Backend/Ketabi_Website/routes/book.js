@@ -147,12 +147,11 @@ const router = express.Router();
 router.post(
     "/Create-Book",
     authenticate,
-    // authorize(roleEnum.publisher),
+    authorize(roleEnum.publisher),
     validate(createSchema),
     upload.single("pdf"),
     AddBook
 );
-//router.get("/List-Books", cacheMiddleware("List-Books"), getBooks);
 router.get("/List-Books", cacheMiddleware("List-Books"), getBooks);
 
 router.get(

@@ -1,54 +1,12 @@
 <app-chat *ngIf="isUserLoggedIn"></app-chat>
 <div class="admin-layout">
   <!-- Sidebar -->
-  <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
-    <div class="sidebar-header">
-      <div class="logo">
-        <i class="fas fa-book-reader"></i>
-        <span *ngIf="!sidebarCollapsed">Ketabi Admin</span>
-      </div>
-      <button class="toggle-btn" (click)="toggleSidebar()">
-        <i class="fas" [class.fa-bars]="sidebarCollapsed" [class.fa-times]="!sidebarCollapsed"></i>
-      </button>
-    </div>
-
-    <nav class="sidebar-nav">
-      <a
-        *ngFor="let item of menuItems"
-        [routerLink]="item.route"
-        routerLinkActive="active"
-        class="nav-item"
-      >
-        <i [ngClass]="['fas', item.icon]"></i>
-        <span *ngIf="!sidebarCollapsed">{{ item.label }}</span>
-        <span class="badge" *ngIf="item.badge && !sidebarCollapsed">{{ item.badge }}</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="logout-btn" (click)="logout()">
-        <i class="fas fa-sign-out-alt"></i>
-        <span *ngIf="!sidebarCollapsed">Logout</span>
-      </button>
-    </div>
-  </aside>
+  <app-admin-sidebar></app-admin-sidebar>
 
   <!-- Main Content -->
   <main class="main-content">
     <!-- Top Bar -->
-    <header class="top-bar">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="text" placeholder="Search..." />
-      </div>
-
-      <div class="top-bar-actions">
-        <div class="user-menu">
-          <span class="user-name">{{ userName }}</span>
-          <i class="fas fa-chevron-down"></i>
-        </div>
-      </div>
-    </header>
+    <app-admin-topbar></app-admin-topbar>
 
     <!-- Page Content -->
     <div class="page-content">

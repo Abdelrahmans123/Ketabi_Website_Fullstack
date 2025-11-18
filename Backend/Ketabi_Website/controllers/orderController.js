@@ -11,21 +11,36 @@ import { processPayment } from "../config/payment.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import Book from "../models/Book.js";
-import { findByIdAndUpdate, findOne, findOneAndUpdate } from "../models/services/db.js";
+import {
+    findByIdAndUpdate,
+    findOne,
+    findOneAndUpdate,
+    remove,
+} from "../models/services/db.js";
 import Coupon from "../models/Coupon.js";
 import User from "../models/User.js";
 import Cart from "../models/Cart.js";
 import { successResponse } from "../utils/successResponse.js";
 import { processPaymobPayment } from "../config/paymobPayment.js";
-import { notifyOrderCancelled, notifyGiftReceived, notifyOrderConfirmed, notifyOrderDelivered, notifyOrderProcessing, notifyOrderShipped, notifyPaymentFailed, notifyPaymentRefunded, notifyPaymentSuccess } from "../services/OrderNotification.js";
+import {
+    notifyOrderCancelled,
+    notifyGiftReceived,
+    notifyOrderConfirmed,
+    notifyOrderDelivered,
+    notifyOrderProcessing,
+    notifyOrderShipped,
+    notifyPaymentFailed,
+    notifyPaymentRefunded,
+    notifyPaymentSuccess,
+} from "../services/OrderNotification.js";
 // items (book, quantity, type), shipping address, paymentMethod, isGift, receipient email, personalizedMessage, coupon
 
 async function getCouponData(couponName) {
     if (couponName === "No Coupon" || !couponName) {
         return {
             discountPercentage: 0,
-            code: "No Coupon"
-        }
+            code: "No Coupon",
+        };
     }
 
     const couponData = await findOne({
@@ -44,7 +59,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     let totalPrice = 0;
     const {
         items,
-        shippingAddress = { phoneNumber: 'No Phone Number' },
+        shippingAddress = { phoneNumber: "No Phone Number" },
         paymentMethod,
         isGift,
         recipientEmail = req.user.email,
@@ -98,7 +113,6 @@ export const createOrder = asyncHandler(async (req, res, next) => {
         library = receiver.library || [];
     }
 
-
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -111,7 +125,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
         }
     };
 
-    const libraryBookIds = library.map(item => item.toString());
+    const libraryBookIds = library.map((item) => item.toString());
 
     // Calculate total price & check if EBOOK is already in library
     for (const item of items) {
@@ -123,9 +137,19 @@ export const createOrder = asyncHandler(async (req, res, next) => {
         }
 
         // Ebook found in library
-        if (item.type === itemType.EBOOK && libraryBookIds.includes(item.book)) {
-            if (isGift) return await abort(`The ebook version of ${book.name} was found in his/her ${recipientEmail} library`, 400);
-            return await abort(`The ebook version of ${book.name} was found in your library`, 400);
+        if (
+            item.type === itemType.EBOOK &&
+            libraryBookIds.includes(item.book)
+        ) {
+            if (isGift)
+                return await abort(
+                    `The ebook version of ${book.name} was found in his/her ${recipientEmail} library`,
+                    400
+                );
+            return await abort(
+                `The ebook version of ${book.name} was found in your library`,
+                400
+            );
         }
 
         // Check physical book   stock
@@ -149,11 +173,16 @@ export const createOrder = asyncHandler(async (req, res, next) => {
         // Check shipping info if physical
         if (
             item.type === itemType.PHYSICAL &&
-            !(shippingAddress.street &&
+            !(
+                shippingAddress.street &&
                 shippingAddress.city &&
-                shippingAddress.phoneNumber)
+                shippingAddress.phoneNumber
+            )
         ) {
-            return await abort(`Incomplete shipping info for ${book.name}`, 400);
+            return await abort(
+                `Incomplete shipping info for ${book.name}`,
+                400
+            );
         }
 
         // Handle ebooks
@@ -183,9 +212,9 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     }
 
     // Apply coupon discount
-    const finalPrice = Math.round(
-        totalPrice * (1 - couponDiscountPercentage / 100) * 100
-    ) / 100;
+    const finalPrice =
+        Math.round(totalPrice * (1 - couponDiscountPercentage / 100) * 100) /
+        100;
 
     // Create order (PENDING)
     const order = new Order({
@@ -218,10 +247,10 @@ export const createOrder = asyncHandler(async (req, res, next) => {
             await order.save();
 
             return res.status(201).json({
-                message: 'Order created, awaiting payment confirmation',
+                message: "Order created, awaiting payment confirmation",
                 data: order,
                 client_secret: payment.client_secret,
-                payment_method: 'Stripe'
+                payment_method: "Stripe",
             });
         } else if (paymentMethod === paymentMethods.Paymob) {
             payment = await processPaymobPayment(order);
@@ -229,17 +258,16 @@ export const createOrder = asyncHandler(async (req, res, next) => {
             await order.save();
 
             return res.status(201).json({
-                message: 'Order created, awaiting payment confirmation',
+                message: "Order created, awaiting payment confirmation",
                 data: order,
                 iframe_url: payment.iframe_url,
                 payment_token: payment.payment_token,
-                payment_method: 'Paymob'
+                payment_method: "Paymob",
             });
         } else {
-            notifyPaymentFailed(order, 'Invalid payment method');
-            return next(new AppError('Invalid payment method', 400));
+            notifyPaymentFailed(order, "Invalid payment method");
+            return next(new AppError("Invalid payment method", 400));
         }
-
     } catch (error) {
         for (const item of order.items) {
             if (item.type === itemType.PHYSICAL) {
@@ -251,20 +279,29 @@ export const createOrder = asyncHandler(async (req, res, next) => {
         }
         order.paymentStatus = paymentStatus.FAILED;
         await order.save();
-        notifyPaymentFailed(order, 'Payment failed')
-        return next(
-            new AppError(
-                `Payment failed. Try again. ${error}`, 502
-            )
-        );
+        notifyPaymentFailed(order, "Payment failed");
+        return next(new AppError(`Payment failed. Try again. ${error}`, 502));
     }
 });
 
 export const getOrdersAdmin = asyncHandler(async (req, res, next) => {
-    const { user, email, orderStatus, orderNumber, paymentStatus, page = 1, limit = 10, sortOrder = "asc", sortBy = "createdAt" } = req.query;
+    const {
+        user,
+        email,
+        orderStatus,
+        orderNumber,
+        paymentStatus,
+        page = 1,
+        limit = 10,
+        sortOrder = "asc",
+        sortBy = "createdAt",
+    } = req.query;
 
     if (user && email) {
-        const error = new AppError("Can't search using both userId and email", 404);
+        const error = new AppError(
+            "Can't search using both userId and email",
+            404
+        );
         return next(error);
     }
 
@@ -282,7 +319,10 @@ export const getOrdersAdmin = asyncHandler(async (req, res, next) => {
     // Sorting logic
     const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1 };
 
-    const orders = await Order.find(filters).sort(sort).skip(skip).limit(parseInt(limit));
+    const orders = await Order.find(filters)
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit));
     const total = await Order.countDocuments(filters);
 
     if (!orders || orders.length === 0) {
@@ -307,13 +347,12 @@ export const getOrdersAdmin = asyncHandler(async (req, res, next) => {
             },
         },
     });
-
 });
 export const getOrderHistory = asyncHandler(async (req, res, next) => {
     const userId = req.user.id || req.user._id;
 
     if (!userId) {
-        return next(new AppError('User ID not found in token', 401));
+        return next(new AppError("User ID not found in token", 401));
     }
 
     const { page = 1, limit = 5 } = req.query;
@@ -329,7 +368,10 @@ export const getOrderHistory = asyncHandler(async (req, res, next) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
-            .populate('items.book', 'name author price discount pdf cover avgRating ratingsCount')
+            .populate(
+                "items.book",
+                "name author price discount pdf cover avgRating ratingsCount"
+            )
             .lean();
 
         const total = await Order.countDocuments({ user: userId });
@@ -337,7 +379,7 @@ export const getOrderHistory = asyncHandler(async (req, res, next) => {
         if (!orders || orders.length === 0) {
             return res.status(200).json({
                 success: true,
-                message: 'No orders found',
+                message: "No orders found",
                 data: {
                     orders: [],
                     pagination: {
@@ -352,7 +394,7 @@ export const getOrderHistory = asyncHandler(async (req, res, next) => {
 
         return res.status(200).json({
             success: true,
-            message: 'Orders retrieved successfully',
+            message: "Orders retrieved successfully",
             data: {
                 orders: orders,
                 pagination: {
@@ -363,9 +405,10 @@ export const getOrderHistory = asyncHandler(async (req, res, next) => {
                 },
             },
         });
-
     } catch (error) {
-        return next(new AppError('Failed to fetch orders: ' + error.message, 500));
+        return next(
+            new AppError("Failed to fetch orders: " + error.message, 500)
+        );
     }
 });
 
@@ -378,10 +421,91 @@ export const getSingleOrder = asyncHandler(async (req, res, next) => {
     if (!order) {
         return res.status(404).json({ message: "Order not found" });
     }
-    
-    return successResponse ({
+
+    return successResponse({
         res,
         statusCode: 200,
-        data: order
+        data: order,
     });
-})
+});
+export const updateOrderStatus = asyncHandler(async (req, res, next) => {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = Object.values(deliveryStatus);
+    if (!validStatuses.includes(status)) {
+        return next(new AppError(`Invalid status: ${status}`, 400));
+    }
+
+    const order = await findOneAndUpdate({
+        model: Order,
+        query: { _id: orderId },
+        data: { orderStatus: status },
+    });
+
+    if (!order) {
+        return next(new AppError("Order not found", 404));
+    }
+
+    // Notify user based on status
+    switch (status) {
+        case deliveryStatus.PROCESSING:
+            notifyOrderProcessing(order);
+            break;
+        case deliveryStatus.SHIPPED:
+            notifyOrderShipped(order);
+            break;
+        case deliveryStatus.DELIVERED:
+            notifyOrderDelivered(order);
+            break;
+        case deliveryStatus.CANCELLED:
+            notifyOrderCancelled(order);
+            break;
+        default:
+            break;
+    }
+
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "Order status updated successfully",
+        data: order,
+    });
+});
+export const deleteOrder = asyncHandler(async (req, res, next) => {
+    const { orderId } = req.params;
+
+    const order = await remove({
+        model: Order,
+        query: orderId,
+    });
+
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "Order deleted successfully",
+        data: null,
+    });
+});
+export const updateOrder = asyncHandler(async (req, res, next) => {
+    const { orderId } = req.params;
+    const updateData = req.body;
+
+    const order = await findOneAndUpdate({
+        model: Order,
+        query: { orderNumber: orderId },
+        update: updateData,
+        options: { new: true },
+    });
+
+    if (!order) {
+        return next(new AppError("Order not found", 404));
+    }
+
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "Order updated successfully",
+        data: order,
+    });
+});

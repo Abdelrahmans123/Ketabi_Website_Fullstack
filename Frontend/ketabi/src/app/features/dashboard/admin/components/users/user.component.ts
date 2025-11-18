@@ -11,7 +11,9 @@ import {
   UpdateUserDTO,
 } from '../../../../../core/services/user.service';
 import { ChatComponent } from '../../../../../shared/components/chat/chat.component';
-
+import Swal from 'sweetalert2';
+import { SidebarComponent } from '../../../../../shared/components/sidebar/sidebar.component';
+import { TopbarComponent } from "../../../../../shared/components/topbar/topbar.component";
 interface ExtendedUser extends User {
   selected?: boolean;
   gender?: string;
@@ -27,7 +29,7 @@ interface MenuItem {
 @Component({
   selector: 'app-user',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ChatComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ChatComponent, SidebarComponent, TopbarComponent],
   templateUrl: './user.component.html',
   styleUrl: './user.component.css',
 })
@@ -88,16 +90,6 @@ export class UserComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // Sidebar Methods
-  toggleSidebar() {
-    this.sidebarCollapsed = !this.sidebarCollapsed;
-  }
-
-  logout() {
-    // Implement your logout logic here
-    console.log('Logging out...');
-    this.router.navigate(['/login']);
-  }
 
   loadUsers() {
     this.loading = true;
@@ -108,12 +100,9 @@ export class UserComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('📥 API Response:', response); // Debug log
 
           if (response.success) {
             this.users = response.users.map((user) => {
-              console.log('👤 User from API:', user.name, 'Status:', user.status); // Debug log
-
               return {
                 ...user,
                 status: user.status,
@@ -121,7 +110,6 @@ export class UserComponent implements OnInit, OnDestroy {
               };
             });
 
-            console.log('✅ Processed users:', this.users); // Debug log
 
             this.filteredUsers = [...this.users];
             this.updateStats();
@@ -132,7 +120,7 @@ export class UserComponent implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('❌ Error loading users:', error);
+          console.error('Error loading users:', error);
           this.errorMessage = error.error?.message || 'Failed to load users. Please try again.';
           this.loading = false;
         },
@@ -299,27 +287,45 @@ export class UserComponent implements OnInit, OnDestroy {
   }
 
   deleteUser(user: ExtendedUser) {
-    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
-      this.userService
-        .deleteUser(user._id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response) => {
-            if (response.success) {
-              this.users = this.users.filter((u) => u._id !== user._id);
-              this.applyFilters();
-              this.updateStats();
-              console.log('User deleted successfully');
-            } else {
-              alert(response.message || 'Failed to delete user');
-            }
-          },
-          error: (error) => {
-            console.error('Error deleting user:', error);
-            alert(error.error?.message || 'Failed to delete user');
-          },
-        });
-    }
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to delete the user "${user.name}"? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete user!',
+      cancelButtonText: 'Cancel',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.userService
+          .deleteUser(user._id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (response) => {
+              if (response.success) {
+                this.users = this.users.filter((u) => u._id !== user._id);
+                this.applyFilters();
+                this.updateStats();
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error!',
+                  text: response.message || 'Failed to delete user',
+                  confirmButtonText: 'OK',
+                });
+              }
+            },
+            error: (error) => {
+              console.error('Error deleting user:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.error?.message || 'Failed to delete user',
+                confirmButtonText: 'OK',
+              });
+            },
+          });
+      }
+    });
   }
 
   openAddUserModal() {
@@ -343,7 +349,12 @@ export class UserComponent implements OnInit, OnDestroy {
   saveUser() {
     if (this.modalMode === 'add') {
       if (!this.selectedUser.name || !this.selectedUser.email || !this.selectedUser.password) {
-        alert('Please fill in all required fields');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Warning',
+          text: 'Please fill in all required fields',
+          confirmButtonText: 'OK',
+        });
         return;
       }
 
@@ -363,17 +374,25 @@ export class UserComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             if (response.success) {
-              // Reload to ensure consistency
               this.loadUsers();
               this.closeModal();
-              console.log('✅ User created successfully');
             } else {
-              alert(response.message || 'Failed to create user');
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: response.message || 'Failed to create user',
+                confirmButtonText: 'OK',
+              });
             }
           },
           error: (error) => {
             console.error('❌ Error creating user:', error);
-            alert(error.error?.message || 'Failed to create user');
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: error.error?.message || 'Failed to create user',
+              confirmButtonText: 'OK',
+            });
           },
         });
     } else if (this.modalMode === 'edit') {
@@ -386,27 +405,32 @@ export class UserComponent implements OnInit, OnDestroy {
         gender: this.selectedUser.gender,
       };
 
-      console.log('🚀 Sending update:', updateData);
-
       this.userService
         .updateUser(this.selectedUser._id, updateData)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            console.log('📥 Update response:', response);
 
             if (response.success) {
-              // Reload all users to ensure UI matches database
               this.loadUsers();
               this.closeModal();
-              console.log('✅ User updated successfully');
             } else {
-              alert(response.message || 'Failed to update user');
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: response.message || 'Failed to update user',
+                confirmButtonText: 'OK',
+              });
             }
           },
           error: (error) => {
-            console.error('❌ Error updating user:', error);
-            alert(error?.error?.message || 'Failed to update user');
+            console.error('Error updating user:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: error?.error?.message || 'Failed to update user',
+              confirmButtonText: 'OK',
+            });
           },
         });
     }

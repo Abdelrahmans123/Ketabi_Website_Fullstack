@@ -35,15 +35,12 @@ export class WishlistComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Subscribe to loading state
     this.wishlistService.loading$
       .pipe(takeUntil(this.destroy$))
       .subscribe((isLoading) => (this.loading = isLoading));
 
-    // Subscribe to wishlist changes (this will update automatically)
     this.wishlistService.wishlist$.pipe(takeUntil(this.destroy$)).subscribe({
       next: (items) => {
-        console.log('Wishlist updated:', items);
         this.wishlistItems = items;
         this.filterItems();
       },
@@ -51,8 +48,6 @@ export class WishlistComponent implements OnInit, OnDestroy {
         this.errorMessage = err.message;
       },
     });
-
-    // Initial load
     this.loadWishlist();
   }
 
@@ -60,8 +55,6 @@ export class WishlistComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
-  // Extract book object safely
   getBook(item: WishlistItem) {
     return item.book;
   }

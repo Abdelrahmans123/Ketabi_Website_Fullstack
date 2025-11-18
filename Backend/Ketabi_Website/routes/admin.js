@@ -3,6 +3,7 @@ import { authenticate } from "../middlewares/auth.js";
 import {
     addUsers,
     deleteUsers,
+    getAdminId,
     getAllUsers,
     getBooksStats,
     getLowStockBooks,
@@ -23,4 +24,5 @@ router.get("/users", authenticate, getAllUsers);
 router.post("/users", authenticate, addUsers);
 router.put("/users/:id", authenticate, updateUsers);
 router.delete("/users/:id", authenticate, deleteUsers);
+router.get("/id", authenticate, getAdminId);
 export default router;

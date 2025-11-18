@@ -6,7 +6,9 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ResponseService } from '../../../../../core/services/response.service';
 import { ChatComponent } from '../../../../../shared/components/chat/chat.component';
-
+import Swal from 'sweetalert2';
+import { SidebarComponent } from '../../../../../shared/components/sidebar/sidebar.component';
+import { TopbarComponent } from '../../../../../shared/components/topbar/topbar.component';
 interface User {
   _id: string;
   name: string;
@@ -36,7 +38,14 @@ interface MenuItem {
 @Component({
   selector: 'app-publisher-requests',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ChatComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    ChatComponent,
+    SidebarComponent,
+    TopbarComponent,
+  ],
   templateUrl: './response.component.html',
   styleUrls: ['./response.component.css'],
 })
@@ -44,7 +53,7 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
   // Sidebar and Navigation
   sidebarCollapsed = false;
   isUserLoggedIn = true;
-  role = 'admin'; // Change to 'user' for user view
+  role = 'admin';
   isAdmin = false;
   userName = 'Admin User';
   notificationCount = 3;
@@ -108,46 +117,66 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // Sidebar Methods
-  toggleSidebar() {
-    this.sidebarCollapsed = !this.sidebarCollapsed;
-  }
-
-  logout() {
-    console.log('Logging out...');
-    this.router.navigate(['/login']);
-  }
-
-  // Load Requests (Admin)
   loadRequests() {
     this.loading = true;
-    this.error = '';
+    this.error = ''; 
+
 
     this.responseService
       .getAllResponses()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response.success) {
-            this.requests = response.data;
+          if (response.status?.toLowerCase() === 'success') {
+            const data = response.data || [];
+            this.requests = Array.isArray(data)
+              ? data.map((r: any) => {
+                  const user = r.userId && typeof r.userId === 'object' ? r.userId : null;
+                  return {
+                    _id: r._id || '',
+                    userId: typeof r.userId === 'string' ? r.userId : user?._id || '',
+                    user: user
+                      ? {
+                          _id: user._id || '',
+                          name: user.name || 'Unknown User',
+                          email: user.email || 'N/A',
+                          phone: user.phone,
+                          role: user.role || 'user',
+                          avatar: user.avatar,
+                        }
+                      : undefined,
+                    message: r.message || '',
+                    status: ['approved', 'rejected', 'pending'].includes(r.status)
+                      ? r.status
+                      : 'pending',
+                    createdAt: r.createdAt || new Date().toISOString(),
+                    updatedAt: r.updatedAt || new Date().toISOString(),
+                  };
+                })
+              : [];
+
             this.filteredRequests = [...this.requests];
             this.updateStats();
             this.applyFilters();
             this.updatePagination();
+            this.loading = false;
           } else {
             this.error = response.message || 'Failed to load requests';
+            console.error('API returned non-success status:', response.status);
+            this.loading = false;
           }
-          this.loading = false;
         },
         error: (error) => {
           console.error('Error loading requests:', error);
           this.error = error.error?.message || 'Failed to load requests. Please try again.';
           this.loading = false;
+          this.requests = [];
+          this.filteredRequests = [];
+          this.updateStats();
         },
       });
   }
 
-  // Load User's Request
   loadUserRequest() {
     this.loading = true;
     this.error = '';
@@ -157,8 +186,7 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response.success && response.data.length > 0) {
-            // Get the most recent request
+          if (response.status === 'success' && response.data.length > 0) {
             this.userRequest = response.data[0];
             this.hasActiveRequest = true;
           } else {
@@ -175,7 +203,6 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
       });
   }
 
-  // Update Stats (Admin)
   updateStats() {
     this.totalRequests = this.requests.length;
     this.pendingRequests = this.requests.filter((r) => r.status === 'pending').length;
@@ -183,7 +210,7 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
     this.rejectedRequests = this.requests.filter((r) => r.status === 'rejected').length;
   }
 
-  // Filters (Admin)
+
   onSearch() {
     this.applyFilters();
   }
@@ -293,7 +320,6 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
 
   submitRequest() {
     if (this.requestMessage.length < 50) {
-      alert('Please provide at least 50 characters describing why you want to become a publisher.');
       return;
     }
 
@@ -302,18 +328,33 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response.success) {
+          if (response.status === 'success') {
             this.userRequest = response.data;
             this.hasActiveRequest = true;
             this.closeRequestModal();
-            alert('Your publisher request has been submitted successfully!');
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: 'Your publisher request has been submitted successfully!',
+              confirmButtonText: 'OK',
+            });
           } else {
-            alert(response.message || 'Failed to submit request');
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: response.message || 'Failed to submit request',
+              confirmButtonText: 'OK',
+            });
           }
         },
         error: (error) => {
           console.error('Error submitting request:', error);
-          alert(error.error?.message || 'Failed to submit request');
+          Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: error.error?.message || 'Failed to submit request',
+            confirmButtonText: 'OK',
+          });
         },
       });
   }
@@ -330,89 +371,164 @@ export class PublisherRequestsComponent implements OnInit, OnDestroy {
   }
 
   approveRequest(request: Response) {
-    if (confirm(`Are you sure you want to approve ${request.user?.name}'s publisher request?`)) {
-      this.responseService
-        .updateResponse(request._id, { status: 'approved' })
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response) => {
-            if (response.success) {
-              // Update local data
-              const index = this.requests.findIndex((r) => r._id === request._id);
-              if (index !== -1) {
-                this.requests[index].status = 'approved';
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to approve ${request.user?.name}'s publisher request?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, approve it!',
+      cancelButtonText: 'Cancel',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.responseService
+          .updateResponse(request._id, { status: 'approved' })
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (response) => {
+              // Fix: Case-insensitive check
+              if (response.status?.toLowerCase() === 'success') {
+                const index = this.requests.findIndex((r) => r._id === request._id);
+                if (index !== -1) {
+                  this.requests[index].status = 'approved';
+                }
+                this.applyFilters();
+                this.updateStats();
+                this.closeDetailModal();
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Success!',
+                  text: 'Publisher request approved successfully!',
+                  confirmButtonText: 'OK',
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error!',
+                  text: response.message || 'Failed to approve request',
+                  confirmButtonText: 'OK',
+                });
               }
-              this.applyFilters();
-              this.updateStats();
-              this.closeDetailModal();
-              alert('Publisher request approved successfully!');
-
-              // TODO: Update user role to 'publisher' in your user service
-            } else {
-              alert(response.message || 'Failed to approve request');
-            }
-          },
-          error: (error) => {
-            console.error('Error approving request:', error);
-            alert(error.error?.message || 'Failed to approve request');
-          },
-        });
-    }
+            },
+            error: (error) => {
+              console.error('Error approving request:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.error?.message || 'Failed to approve request',
+                confirmButtonText: 'OK',
+              });
+            },
+          });
+      }
+    });
   }
 
   rejectRequest(request: Response) {
-    if (confirm(`Are you sure you want to reject ${request.user?.name}'s publisher request?`)) {
-      this.responseService
-        .updateResponse(request._id, { status: 'rejected' })
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response) => {
-            if (response.success) {
-              // Update local data
-              const index = this.requests.findIndex((r) => r._id === request._id);
-              if (index !== -1) {
-                this.requests[index].status = 'rejected';
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to reject ${request.user?.name}'s publisher request?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, reject it!',
+      cancelButtonText: 'Cancel',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.responseService
+          .updateResponse(request._id, { status: 'rejected' })
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (response) => {
+              // Fix: Case-insensitive check
+              if (response.status?.toLowerCase() === 'success') {
+                const index = this.requests.findIndex((r) => r._id === request._id);
+                if (index !== -1) {
+                  this.requests[index].status = 'rejected';
+                }
+                this.applyFilters();
+                this.updateStats();
+                this.closeDetailModal();
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Success!',
+                  text: 'Publisher request rejected.',
+                  confirmButtonText: 'OK',
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error!',
+                  text: response.message || 'Failed to reject request',
+                  confirmButtonText: 'OK',
+                });
               }
-              this.applyFilters();
-              this.updateStats();
-              this.closeDetailModal();
-              alert('Publisher request rejected.');
-            } else {
-              alert(response.message || 'Failed to reject request');
-            }
-          },
-          error: (error) => {
-            console.error('Error rejecting request:', error);
-            alert(error.error?.message || 'Failed to reject request');
-          },
-        });
-    }
+            },
+            error: (error) => {
+              console.error('Error rejecting request:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.error?.message || 'Failed to reject request',
+                confirmButtonText: 'OK',
+              });
+            },
+          });
+      }
+    });
   }
 
   deleteRequest(request: Response) {
-    if (confirm(`Are you sure you want to delete this request?`)) {
-      this.responseService
-        .deleteResponse(request._id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response) => {
-            if (response.success) {
-              this.requests = this.requests.filter((r) => r._id !== request._id);
-              this.applyFilters();
-              this.updateStats();
-              alert('Request deleted successfully!');
-            } else {
-              alert(response.message || 'Failed to delete request');
-            }
-          },
-          error: (error) => {
-            console.error('Error deleting request:', error);
-            alert(error.error?.message || 'Failed to delete request');
-          },
-        });
-    }
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to delete ${request.user?.name}'s publisher request? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.responseService
+          .deleteResponse(request._id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (response) => {
+              // Fix: Case-insensitive check
+              if (response.status?.toLowerCase() === 'success') {
+                this.requests = this.requests.filter((r) => r._id !== request._id);
+                this.applyFilters();
+                this.updateStats();
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Success!',
+                  text: 'Request deleted successfully!',
+                  confirmButtonText: 'OK',
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error!',
+                  text: response.message || 'Failed to delete request',
+                  confirmButtonText: 'OK',
+                });
+              }
+            },
+            error: (error) => {
+              console.error('Error deleting request:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.error?.message || 'Failed to delete request',
+                confirmButtonText: 'OK',
+              });
+            },
+          });
+      }
+    });
   }
-
+  getPaginatedRequests(): Response[] {
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    return this.filteredRequests.slice(startIndex, endIndex);
+  }
   // Helper Methods
   getStatusIcon(status: string): string {
     const icons: Record<string, string> = {

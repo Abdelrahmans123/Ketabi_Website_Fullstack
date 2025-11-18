@@ -38,21 +38,18 @@ export class Navbar implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    console.log('🚀 Navbar initialized');
 
     this.cartCount$ = this.cartService.cart$.pipe(
       map((cart) => cart.items.reduce((sum, item) => sum + item.quantity, 0))
     );
 
-    // Subscribe to authentication state changes
+
     this.authSubscription = this.authService.isAuthenticated$.subscribe({
       next: (isAuth) => {
-        console.log('🔐 Auth state changed:', isAuth);
+
         this.isLoggedIn = isAuth;
         if (isAuth) {
           this.currentUser = this.authService.getCurrentUser();
-          console.log('👤 Current user:', this.currentUser);
-          // Setup socket notifications when user authenticates
           this.setupSocketNotifications();
         } else {
           this.currentUser = null;
@@ -60,13 +57,10 @@ export class Navbar implements OnInit, OnDestroy {
         }
       },
     });
-
-    // Check initial auth status
     this.checkAuthStatus();
   }
 
   ngOnDestroy() {
-    console.log('🧹 Navbar destroying, cleaning up subscriptions');
     if (this.authSubscription) {
       this.authSubscription.unsubscribe();
     }
@@ -78,98 +72,68 @@ export class Navbar implements OnInit, OnDestroy {
 
   private checkAuthStatus() {
     this.isLoggedIn = this.authService.isAuthenticated();
-    console.log('🔍 Initial auth check:', this.isLoggedIn);
     if (this.isLoggedIn) {
       this.currentUser = this.authService.getCurrentUser();
-      console.log('👤 Initial user:', this.currentUser);
       this.setupSocketNotifications();
     }
   }
 
   private setupSocketNotifications() {
-    // Only setup if not already subscribed
     if (this.socketSub && !this.socketSub.closed) {
-      console.log('⚠️ Already subscribed to notifications, skipping setup');
       return;
     }
 
-    console.log('🔌 Setting up socket notifications subscription');
     this.subscribeToNotifications();
 
-    // Monitor connection status
     if (!this.connectionSub || this.connectionSub.closed) {
       this.connectionSub = this.socketService.connectionStatus$.subscribe({
         next: (isConnected) => {
-          console.log('🔌 Socket connection status changed:', isConnected);
           if (isConnected && (!this.socketSub || this.socketSub.closed)) {
-            console.log('✅ Socket reconnected, re-subscribing to notifications');
             this.subscribeToNotifications();
           }
         },
         error: (err) => {
-          console.error('❌ Connection status error:', err);
+          console.error('Connection status error:', err);
         },
       });
     }
   }
 
   private subscribeToNotifications() {
-    // Cleanup existing subscription first
     if (this.socketSub) {
-      console.log('🧹 Cleaning up existing notification subscription');
       this.socketSub.unsubscribe();
       this.socketSub = undefined;
     }
-    console.log('👂 Subscribing to socket notifications');
 
     this.socketSub = this.socketService.notifications$.subscribe({
       next: (notif) => {
-        console.log('🚀 ~ Navbar ~ subscribeToNotifications ~ notif:', notif);
         if (!notif) {
-          console.log('⚠️ Received null notification');
           return;
         }
-
-        console.log('🎉 📬 NOTIFICATION RECEIVED IN NAVBAR:', notif);
-        console.log('📊 Notification details:', {
-          id: notif._id,
-          type: notif.type,
-          title: notif.title,
-          content: notif.content,
-          userId: notif.userId,
-        });
-
         const messageText = notif.title || notif.content || notif.message || 'New notification';
-
-        // Add to notification list (at the beginning)
         this.notifications.unshift({
           ...notif,
           message: messageText,
           timestamp: notif.createdAt || notif.timestamp || new Date().toISOString(),
         });
 
-        // Increment count
-        this.notificationCount++;
-        console.log('🔔 Updated notification count:', this.notificationCount);
-        console.log('📋 Total notifications in list:', this.notifications.length);
 
-        // Show toast notification
+        this.notificationCount++;
+
         this.notificationService.info(messageText, 4000);
       },
       error: (err) => {
-        console.error('❌ Socket notification subscription error:', err);
+        console.error('Socket notification subscription error:', err);
       },
       complete: () => {
-        console.log('⚠️ Notification subscription completed (should not happen)');
+        console.log('Notification subscription completed (should not happen)');
       },
     });
 
-    console.log('✅ Socket notifications subscription active');
   }
 
   private cleanupSocketNotifications() {
     if (this.socketSub) {
-      console.log('🧹 Cleaning up socket subscription');
       this.socketSub.unsubscribe();
       this.socketSub = undefined;
     }
@@ -178,29 +142,21 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   logout() {
-    console.log('🚪 Logging out');
     this.authService.logout().subscribe({
       next: () => {
-        console.log('✅ Logged out successfully');
       },
       error: (error: any) => {
-        console.error('❌ Logout error:', error);
+        console.error('Logout error:', error);
         this.router.navigate(['/auth/login']);
       },
     });
   }
 
   notificationsClicked() {
-    console.log('🔔 Notifications clicked');
-    console.log('📊 Current count:', this.notificationCount);
-    console.log('📋 Total notifications:', this.notifications.length);
 
-    // Toggle dropdown
     this.showNotifications = !this.showNotifications;
 
-    // If opening, mark all as read (clear count)
     if (this.showNotifications) {
-      console.log('📖 Marking notifications as read');
       this.notificationCount = 0;
     }
   }
@@ -258,19 +214,5 @@ export class Navbar implements OnInit, OnDestroy {
     } else if (role === 'publisher') {
       this.router.navigate(['/orders']);
     }
-  }
-
-  // Debug method - call this to check notification system status
-  debugNotificationSystem() {
-    console.log('🐛 === NOTIFICATION SYSTEM DEBUG ===');
-    console.log('Socket connected:', this.socketService.isConnected());
-    console.log('Current user:', this.currentUser);
-    console.log('User ID:', this.currentUser?._id || this.currentUser?.id);
-    console.log('Is logged in:', this.isLoggedIn);
-    console.log('Socket subscription active:', !!this.socketSub);
-    console.log('Connection subscription active:', !!this.connectionSub);
-    console.log('Notification count:', this.notificationCount);
-    console.log('Total notifications:', this.notifications.length);
-    console.log('🐛 === END DEBUG ===');
   }
 }

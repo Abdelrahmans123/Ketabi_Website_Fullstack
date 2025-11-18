@@ -17,7 +17,7 @@
     <div class="book-main-section">
       <!-- Book Image -->
       <div class="book-image-container">
-        <img [src]="selectedBook.image?.url || 'default-book.jpg'" [alt]="selectedBook.name" class="book-image" />
+        <img [src]="selectedBook.image.url || 'default-book.jpg'" [alt]="selectedBook.name" class="book-image" />
         <!-- Discount Badge -->
         <div class="discount-badge" *ngIf="selectedBook.discount && (selectedBook.discount || 0) > 0">
           -{{ selectedBook.discount }}%
