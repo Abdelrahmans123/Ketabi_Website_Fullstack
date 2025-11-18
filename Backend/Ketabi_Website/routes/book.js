@@ -147,7 +147,7 @@ const router = express.Router();
 router.post(
     "/Create-Book",
     authenticate,
-    // authorize(roleEnum.publisher),
+    authorize(roleEnum.publisher),
     validate(createSchema),
     upload.single("pdf"),
     AddBook
