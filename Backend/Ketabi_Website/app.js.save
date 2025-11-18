@@ -36,9 +36,8 @@ import salesRouter from "./routes/adminSales.js";
 const bootstrap = async () => {
     const app = express();
     const PORT = process.env.PORT || 3000;
-    
-    // Trust first proxy (Nginx)
-    app.set('trust proxy', 1);
+
+    app.set('trust proxy', 1); 
 
     // *---MongoDB & Redis Connection---*
     await connectMongoDB();
