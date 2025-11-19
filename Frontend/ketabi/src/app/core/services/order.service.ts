@@ -31,7 +31,12 @@ export class OrderService {
   }
 
   getOrderHistory(page: number = 1, limit: number = 10): Observable<any> {
-    return this.http.get(`${this.base_url}/order-history`);
+    return this.http.get(`${this.base_url}/order-history`, {
+      params: {
+        page: page.toString(),
+        limit: limit.toString(),
+      },
+    });
   }
 
   getOrderDetails(orderId: string): Observable<any> {
@@ -39,13 +44,35 @@ export class OrderService {
   }
 
   // GET ALL ORDERS (Admin)
-  getAllOrders(page: number = 1, limit: number = 10): Observable<any> {
-    return this.http.get(`${this.base_url}`, {
-      params: {
-        page: page.toString(),
-        limit: limit.toString(),
-      },
-    });
+  // `filters` can include: orderNumber, user, email, orderStatus, paymentStatus, sortBy, sortOrder
+  getAllOrders(
+    page: number = 1,
+    limit: number = 10,
+    filters: { [key: string]: any } = {}
+  ): Observable<any> {
+    const params: any = {
+      page: page.toString(),
+      limit: limit.toString(),
+    };
+
+    // Merge allowed filters
+    const allowed = [
+      'orderNumber',
+      'user',
+      'email',
+      'orderStatus',
+      'paymentStatus',
+      'sortBy',
+      'sortOrder',
+    ];
+
+    for (const key of Object.keys(filters || {})) {
+      if (allowed.includes(key) && filters[key] != null && filters[key] !== '') {
+        params[key] = String(filters[key]);
+      }
+    }
+
+    return this.http.get(`${this.base_url}`, { params });
   }
   // Add these methods to your order.service.ts:
 

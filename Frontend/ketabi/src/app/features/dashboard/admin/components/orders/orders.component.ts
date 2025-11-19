@@ -94,7 +94,20 @@ export class OrdersComponent implements OnInit {
   loadOrders() {
     this.loading = true;
     this.errorMessage = '';
-    this.orderService.getAllOrders(this.currentPage, this.pageSize).subscribe({
+    // Build filter object to send to backend when using server-side pagination
+    const filters: any = {};
+    if (this.selectedStatus) filters.orderStatus = this.selectedStatus;
+    if (this.selectedPaymentStatus) filters.paymentStatus = this.selectedPaymentStatus;
+    // Simple heuristic: if searchTerm contains @, treat as email; otherwise send as orderNumber
+    if (this.searchTerm && this.searchTerm.trim().length > 0) {
+      if (this.searchTerm.includes('@')) {
+        filters.email = this.searchTerm.trim();
+      } else {
+        filters.orderNumber = this.searchTerm.trim();
+      }
+    }
+
+    this.orderService.getAllOrders(this.currentPage, this.pageSize, filters).subscribe({
       next: (response) => {
         // Response shape may be: { data: { orders: [...], pagination: { total, page, pages } } }
         const payload = response?.data ? response.data : response;
@@ -234,13 +247,21 @@ export class OrdersComponent implements OnInit {
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
-      this.updatePagination();
+      if (this.usingServerPagination) {
+        this.loadOrders();
+      } else {
+        this.updatePagination();
+      }
     }
   }
 
   onPageSizeChange() {
     this.currentPage = 1;
-    this.updatePagination();
+    if (this.usingServerPagination) {
+      this.loadOrders();
+    } else {
+      this.updatePagination();
+    }
   }
 
   getPageNumbers(): number[] {
