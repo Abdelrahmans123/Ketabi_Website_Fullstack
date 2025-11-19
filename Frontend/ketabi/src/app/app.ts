@@ -12,8 +12,9 @@ import { filter } from 'rxjs';
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App  {
+export class App {
   isAdminRoute = false;
+  isLoading = true;
   protected readonly title = signal('ketabi');
   constructor(private router: Router) {}
   ngOnInit() {
@@ -21,6 +22,7 @@ export class App  {
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.isAdminRoute = event.url.startsWith('/admin');
+        this.isLoading = false;
       });
   }
 }

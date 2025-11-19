@@ -28,12 +28,12 @@ export const itemType = {
 };
 
 export const deliveryStatus = {
-    PENDING: "Pending",
-    PROCESSING: "Processing",
-    SHIPPED: "Shipped",
-    IN_TRANSIT: "InTransit",
-    DELIVERED: "Delivered",
-    RETURNED: "Returned",
+    PENDING: "pending",
+    PROCESSING: "processing",
+    SHIPPED: "shipped",
+    IN_TRANSIT: "inTransit",
+    DELIVERED: "delivered",
+    RETURNED: "returned",
 }
 
 export const refundStatus = {

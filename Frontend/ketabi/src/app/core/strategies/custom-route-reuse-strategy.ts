@@ -35,7 +35,6 @@ export class CustomRouteReuseStrategy implements RouteReuseStrategy {
       
       // Don't reuse if the book ID changed - this forces component reload
       if (futureId && currId && futureId !== currId) {
-        console.log(`Route reuse prevented: Book ID changed from ${currId} to ${futureId}`);
         return false;
       }
       

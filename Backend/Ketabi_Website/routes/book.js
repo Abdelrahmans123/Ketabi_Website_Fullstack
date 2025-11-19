@@ -152,7 +152,6 @@ router.post(
     upload.single("pdf"),
     AddBook
 );
-//router.get("/List-Books", cacheMiddleware("List-Books"), getBooks);
 router.get("/List-Books", cacheMiddleware("List-Books"), getBooks);
 
 router.get(

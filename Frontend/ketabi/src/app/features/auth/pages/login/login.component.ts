@@ -15,16 +15,13 @@ import { SocialLoginData } from '../../components/register-form/register-form.co
   styleUrls: ['./login.component.css'],
 })
 export class LoginPageComponent implements OnDestroy {
-  // State passed to child component
   isLoading = false;
   errorMessage = '';
   showOtpInput = false;
 
-  // OTP timer management
   otpTimer = 0;
   private otpTimerInterval: any;
 
-  // Temporary storage for credentials (needed for OTP resend)
   private lastCredentials?: LoginRequest;
 
   constructor(private authService: AuthService, private router: Router) {
@@ -35,18 +32,16 @@ export class LoginPageComponent implements OnDestroy {
     this.clearOtpTimer();
   }
 
-  // Check if user is already logged in
   private checkExistingSession() {
     if (this.authService.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
     }
   }
 
-  // Handle login submission from child component
   onLoginSubmit(credentials: { email: string; password: string }) {
     this.isLoading = true;
     this.errorMessage = '';
-    this.lastCredentials = credentials; // Store for potential resend
+    this.lastCredentials = credentials;
 
     this.authService.login(credentials).subscribe({
       next: (response: AuthResponse) => {
@@ -60,7 +55,6 @@ export class LoginPageComponent implements OnDestroy {
     });
   }
 
-  // Handle OTP submission from child component
   onOtpSubmit(otp: string) {
     if (!otp || otp.length !== 6) {
       this.errorMessage = 'Please enter a valid 6-digit code';
@@ -82,10 +76,9 @@ export class LoginPageComponent implements OnDestroy {
     });
   }
 
-  // Handle resend OTP from child component
   onResendOtp() {
     if (this.otpTimer > 0) {
-      return; // Still in cooldown
+      return;
     }
 
     if (!this.lastCredentials) {
@@ -100,7 +93,6 @@ export class LoginPageComponent implements OnDestroy {
       next: () => {
         this.isLoading = false;
         this.startOtpTimer();
-        // Optionally show success message
       },
       error: (error: any) => {
         this.isLoading = false;
@@ -111,8 +103,6 @@ export class LoginPageComponent implements OnDestroy {
 
   onSocialLogin(event: SocialLoginEvent) {
     const { token, userData, provider } = event;
-
-    // Validate token
     if (!token) {
       this.errorMessage = 'No authentication token received. Please try again.';
       return;
@@ -120,14 +110,6 @@ export class LoginPageComponent implements OnDestroy {
 
     this.isLoading = true;
     this.errorMessage = '';
-
-    console.log('Social login attempt:', {
-      provider,
-      hasToken: !!token,
-      tokenLength: token?.length,
-      userData: userData,
-    });
-
     const loginData = { provider, token, userData };
 
     // First, try to login
@@ -138,25 +120,19 @@ export class LoginPageComponent implements OnDestroy {
 
     loginEndpoint.subscribe({
       next: (response) => {
-        console.log('Login successful - User exists:', response);
         this.handleSuccessfulAuth(response, false);
       },
       error: (loginError) => {
-        console.log('User not found, attempting registration...', loginError);
-
-        // If user doesn't exist (404 or 401), create new account
         if (loginError.status === 404 || loginError.status === 401) {
           this.registerNewUser(token, userData, provider);
         } else if (
           loginError.status === 400 &&
           loginError.error?.message?.includes('verifyIdToken')
         ) {
-          // Handle invalid token error specifically
           this.isLoading = false;
           this.errorMessage = 'Invalid authentication token. Please try signing in again.';
           console.error('Token verification failed:', loginError);
         } else {
-          // Handle other errors
           console.error('Login error:', loginError);
           this.isLoading = false;
           this.errorMessage =
@@ -165,10 +141,11 @@ export class LoginPageComponent implements OnDestroy {
       },
     });
   }
-  // Replace the registerNewUser method in your login-page.component.ts
-
+  handleGoogleLogin() {
+    // Don't call signIn() - the button handles it automatically
+    // The authState subscription above will catch the login
+  }
   registerNewUser(token: string, userData: any, provider: 'google' | 'facebook') {
-    // Normalize user data into a userData payload expected by the backend
     let userPayload;
 
     if (provider === 'google') {
@@ -180,7 +157,6 @@ export class LoginPageComponent implements OnDestroy {
         photoUrl: userData.photoUrl || '',
       };
     } else {
-      // Facebook
       const firstName = userData.first_name || userData.firstName || '';
       const lastName = userData.last_name || userData.lastName || '';
       const fullName = userData.name || `${firstName} ${lastName}`.trim();
@@ -193,8 +169,6 @@ export class LoginPageComponent implements OnDestroy {
         photoUrl: userData.picture?.data?.url || userData.photoUrl || '',
       };
     }
-
-    // Build SocialLoginData-shaped payload: { provider, token, userData }
     const socialPayload: SocialLoginData = {
       provider,
       token,
@@ -208,27 +182,17 @@ export class LoginPageComponent implements OnDestroy {
 
     registerEndpoint.subscribe({
       next: (response) => {
-        console.log('Registration successful:', response);
         this.handleSuccessfulAuth(response, true);
       },
       error: (regError) => {
         console.log('Registration error:', regError);
         this.isLoading = false;
-
-        // Provide more specific error messages
         const errorMessage = regError.error?.message || 'Registration failed. Please try again.';
         this.errorMessage = errorMessage;
-
         console.error('Full registration error:', regError);
       },
     });
   }
-
-  // Also update the onSocialLogin method for better error handling
-
-  // Process successful login response
-
-  // Process login errors
   private handleLoginError(error: any) {
     this.isLoading = false;
     const status = error.status;
@@ -253,12 +217,9 @@ export class LoginPageComponent implements OnDestroy {
       default:
         this.errorMessage = message || 'Login failed. Please try again.';
     }
-
-    // Log error for debugging
     console.error('Login error:', error);
   }
 
-  // Start OTP resend timer
   private startOtpTimer() {
     this.clearOtpTimer();
     this.otpTimer = 60;
@@ -271,7 +232,6 @@ export class LoginPageComponent implements OnDestroy {
     }, 1000);
   }
 
-  // Clear OTP timer
   private clearOtpTimer() {
     if (this.otpTimerInterval) {
       clearInterval(this.otpTimerInterval);
@@ -280,23 +240,13 @@ export class LoginPageComponent implements OnDestroy {
   }
 
   handleSuccessfulAuth(response: AuthResponse, isNewUser: boolean) {
-    console.log('Full response:', JSON.stringify(response, null, 2));
-
-    // Add this line to manually check
-    setTimeout(() => {
-      console.log('After 1 second - User:', this.authService.getCurrentUser());
-    }, 1000);
-
     this.authService.redirectToDashboard();
   }
 
-  // Also update the regular login success handler
   private handleLoginSuccess(response: AuthResponse) {
     if (response.data?.accessToken) {
-      // AuthService already handled everything via tap operator
       this.authService.redirectToDashboard();
     } else {
-      // OTP required
       this.showOtpInput = true;
       this.startOtpTimer();
     }

@@ -61,7 +61,6 @@ export const checkAbandonedCarts = asyncHandler(async () => {
             await sendCartReminder(cart, reminderType);
         }
     }
-    console.log(`Cart reminder check completed at ${now.toISOString()}`);
 });
 const sendCartReminder = asyncHandler(async (cart, reminderType) => {
     const itemCount = cart.items.length;
@@ -129,7 +128,7 @@ const getLastCartReminder = async (userId, reminderType) => {
 
 export const initCartReminderScheduler = () => {
     cron.schedule("0 */6 * * *", () => {
-        console.log("Running cart reminder check...");
+
         checkAbandonedCarts();
     });
     console.log("Cart reminder scheduler initialized");
@@ -166,9 +165,6 @@ export const initCartReminderCleanup = () => {
                     createdAt: { $lt: thirtyDaysAgo },
                 },
             });
-            console.log(
-                `Cleaned up ${result.deletedCount} old cart reminder notifications`
-            );
         } catch (error) {
             console.error("Error cleaning up cart reminders:", error);
         }

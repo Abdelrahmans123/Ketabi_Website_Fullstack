@@ -1,0 +1,413 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { OrderService } from '../../../../../core/services/order.service';
+import { ChatComponent } from '../../../../../shared/components/chat/chat.component';
+import { SidebarComponent } from '../../../../../shared/components/sidebar/sidebar.component';
+import { TopbarComponent } from '../../../../../shared/components/topbar/topbar.component';
+
+interface Order {
+  _id: string;
+  orderNumber: string;
+  userEmail: string;
+  userName: string;
+  user: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  items: Array<{
+    bookId: string;
+    bookName: string;
+    bookImage: string;
+    quantity: number;
+    price: number;
+  }>;
+  finalPrice: number;
+  orderStatus: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentMethod: string;
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  orderDate: Date;
+  updatedDate: Date;
+  trackingNumber?: string;
+  notes?: string;
+  selected?: boolean;
+}
+
+@Component({
+  selector: 'app-orders',
+  standalone: true,
+  imports: [CommonModule, FormsModule, ChatComponent, SidebarComponent, TopbarComponent],
+  templateUrl: './orders.component.html',
+  styleUrls: ['./orders.component.css'],
+})
+export class OrdersComponent implements OnInit {
+  // Orders data
+  orders: Order[] = [];
+  filteredOrders: Order[] = [];
+  paginatedOrders: Order[] = [];
+
+  // Stats
+  totalOrders = 0;
+  pendingOrders = 0;
+  completedOrders = 0;
+  totalRevenue = 0;
+
+  // Filters
+  searchTerm = '';
+  selectedStatus = '';
+  selectedPaymentStatus = '';
+  selectedDateRange = '';
+
+  // Pagination
+  currentPage = 1;
+  pageSize = 10;
+  totalPages = 1;
+  isUserLoggedIn = true;
+  role = 'admin';
+  // Modal
+  showOrderModal = false;
+  selectedOrder: any = {};
+  modalMode: 'view' | 'edit' = 'view';
+
+  // Loading & Error
+  loading = false;
+  errorMessage = '';
+
+  // Selection
+  selectAll = false;
+
+  constructor(private orderService: OrderService) {}
+
+  ngOnInit() {
+    this.loadOrders();
+  }
+
+  loadOrders() {
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.orderService.getAllOrders(this.currentPage, this.pageSize).subscribe({
+      next: (response) => {
+        let ordersArray = [];
+        ordersArray = response.data.orders;
+        this.orders = [...ordersArray];
+        this.filteredOrders = [...this.orders];
+        this.calculateStats();
+        this.updatePagination();
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading orders:', error);
+        this.errorMessage = 'Failed to load orders. Please try again.';
+        this.loading = false;
+
+        // Fallback to mock data for development
+        if (error.status === 0 || error.status === 404) {
+          console.warn('Using mock data for development');
+          // this.orders = this.generateMockOrders();
+          this.filteredOrders = [...this.orders];
+          this.calculateStats();
+          this.updatePagination();
+          this.errorMessage = '';
+        }
+      },
+    });
+  }
+
+  calculateStats() {
+    this.totalOrders = this.orders.length;
+    this.pendingOrders = this.orders.filter(
+      (o) => o.orderStatus === 'pending' || o.orderStatus === 'processing'
+    ).length;
+    this.completedOrders = this.orders.filter((o) => o.orderStatus === 'delivered').length;
+    this.totalRevenue = this.orders
+      .filter((o) => o.paymentStatus === 'paid')
+      .reduce((sum, order) => sum + order.finalPrice, 0);
+  }
+
+  onSearch() {
+    this.applyFilters();
+  }
+
+  onFilterChange() {
+    this.applyFilters();
+  }
+
+  applyFilters() {
+    this.filteredOrders = this.orders.filter((order) => {
+      const matchesSearch =
+        !this.searchTerm ||
+        order.orderNumber.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        order.user.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        order.user.email.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+      const matchesStatus = !this.selectedStatus || order.orderStatus === this.selectedStatus;
+      const matchesPayment =
+        !this.selectedPaymentStatus || order.paymentStatus === this.selectedPaymentStatus;
+
+      // Date range filter
+      let matchesDate = true;
+      if (this.selectedDateRange) {
+        const now = new Date();
+        const orderDate = new Date(order.orderDate);
+
+        switch (this.selectedDateRange) {
+          case 'today':
+            matchesDate = orderDate.toDateString() === now.toDateString();
+            break;
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            matchesDate = orderDate >= weekAgo;
+            break;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            matchesDate = orderDate >= monthAgo;
+            break;
+          case 'year':
+            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            matchesDate = orderDate >= yearAgo;
+            break;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesPayment && matchesDate;
+    });
+
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  resetFilters() {
+    this.searchTerm = '';
+    this.selectedStatus = '';
+    this.selectedPaymentStatus = '';
+    this.selectedDateRange = '';
+    this.applyFilters();
+  }
+
+  updatePagination() {
+    this.totalPages = Math.ceil(this.filteredOrders.length / this.pageSize);
+    const start = (this.currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    this.paginatedOrders = this.filteredOrders.slice(start, end);
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updatePagination();
+    }
+  }
+
+  onPageSizeChange() {
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  getPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxPages = 5;
+    let start = Math.max(1, this.currentPage - Math.floor(maxPages / 2));
+    let end = Math.min(this.totalPages, start + maxPages - 1);
+
+    if (end - start < maxPages - 1) {
+      start = Math.max(1, end - maxPages + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  getPaginationInfo() {
+    const start = (this.currentPage - 1) * this.pageSize + 1;
+    const end = Math.min(this.currentPage * this.pageSize, this.filteredOrders.length);
+    return { start, end, total: this.filteredOrders.length };
+  }
+
+  viewOrder(order: Order) {
+    this.orderService.getOrderDetails(order._id).subscribe({
+      next: (response) => {
+        let orderData = response;
+        if (response.data) {
+          orderData = response.data;
+        } else if (response.order) {
+          orderData = response.order;
+        }
+        this.modalMode = 'view';
+        this.showOrderModal = true;
+      },
+      error: (error) => {
+        console.error('Error loading order details:', error);
+        this.selectedOrder = { ...order };
+        this.modalMode = 'view';
+        this.showOrderModal = true;
+      },
+    });
+  }
+
+  editOrder(order: Order) {
+    this.selectedOrder = { ...order };
+    this.modalMode = 'edit';
+    this.showOrderModal = true;
+  }
+
+updateOrderStatus(order: Order, newStatus: Order['orderStatus']) {
+  const oldStatus = order.orderStatus;
+
+  order.orderStatus = newStatus;
+  order.updatedDate = new Date();
+  
+
+  this.orderService.updateOrderStatus(order._id, newStatus).subscribe({
+    next: (response) => {
+    },
+    error: (error) => {
+      console.error('Error updating order status:', error);
+      order.orderStatus = oldStatus;
+    },
+  });
+}
+
+  deleteOrder(order: Order) {
+    if (confirm(`Are you sure you want to delete order ${order.orderNumber}?`)) {
+      this.orderService.deleteOrder(order._id).subscribe({
+        next: (response) => {
+          this.orders = this.orders.filter((o) => o._id !== order._id);
+          this.applyFilters();
+        },
+        error: (error) => {
+          console.error('Error deleting order:', error);
+        },
+      });
+      this.orders = this.orders.filter((o) => o._id !== order._id);
+      this.applyFilters();
+    }
+  }
+  closeModal() {
+    this.showOrderModal = false;
+    this.selectedOrder = {};
+  }
+
+  toggleSelectAll() {
+    this.paginatedOrders.forEach((order) => (order.selected = this.selectAll));
+  }
+
+  onOrderSelect() {
+    this.selectAll = this.paginatedOrders.every((order) => order.selected);
+  }
+
+  exportOrders() {
+
+    // Create CSV content
+    const headers = ['Order Number', 'Customer', 'Email', 'Total', 'Status', 'Payment', 'Date'];
+    const csvContent = [
+      headers.join(','),
+      ...this.filteredOrders.map((order) =>
+        [
+          order.orderNumber,
+          order.user.name,
+          order.user.email,
+          order.finalPrice.toFixed(2),
+          order.orderStatus,
+          order.paymentStatus,
+          new Date(order.orderDate).toLocaleDateString(),
+        ].join(',')
+      ),
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  printOrder(order: Order) {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Order ${order.orderNumber}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { color: #333; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+              th { background-color: #f5f5f5; }
+            </style>
+          </head>
+          <body>
+            <h1>Order ${order.orderNumber}</h1>
+            <p><strong>Customer:</strong> ${order.user.name}</p>
+            <p><strong>Email:</strong> ${order.user.email}</p>
+            <p><strong>Date:</strong> ${new Date(order.orderDate).toLocaleDateString()}</p>
+            <p><strong>Status:</strong> ${order.orderStatus}</p>
+            <h2>Items</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Book</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.items
+                  .map(
+                    (item) => `
+                  <tr>
+                    <td>${item.bookName}</td>
+                    <td>${item.quantity}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td>$${(item.quantity * item.price).toFixed(2)}</td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+            <h3>Total: $${order.finalPrice.toFixed(2)}</h3>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  }
+
+  getStatusClass(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      pending: 'warning',
+      processing: 'info',
+      shipped: 'primary',
+      delivered: 'success',
+      cancelled: 'danger',
+    };
+    return statusMap[status] || 'secondary';
+  }
+
+  getPaymentStatusClass(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      pending: 'warning',
+      paid: 'success',
+      failed: 'danger',
+      refunded: 'info',
+    };
+    return statusMap[status] || 'secondary';
+  }
+}

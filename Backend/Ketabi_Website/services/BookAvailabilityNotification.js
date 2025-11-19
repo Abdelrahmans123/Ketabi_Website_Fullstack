@@ -38,36 +38,24 @@ export const notifyBookBackInStock = async (bookId) => {
     );
 
     await Promise.all(notificationPromises);
-    console.log(
-        `Sent back-in-stock notifications to ${users.length} users for book: ${book.name}`
-    );
 };
 
 export const notifyPriceDrop = async (bookId, oldPrice, newPrice) => {
     const book = await findById({ model: Book, id: bookId });
-    console.log("🚀 ~ notifyPriceDrop ~ book:", book);
     if (!book) {
-        console.log(`Book not found: ${bookId}`);
         return;
     }
 
     const discountPercentage = Math.round(
         ((oldPrice - newPrice) / oldPrice) * 100
     );
-
-    // FIX: Query nested 'book' field in wishlist array
     const users = await findAll({
         model: User,
-        query: { "wishlist.book": bookId }, // ✅ Changed from 'filter' and query nested field
+        query: { "wishlist.book": bookId }, 
         select: "_id name",
     });
-    console.log("🚀 ~ notifyPriceDrop ~ users:", users);
-    console.log(`Found ${users?.length || 0} users with book in wishlist`);
 
     if (!users || users.length === 0) {
-        console.log(
-            `No users have book ${book.name} in their wishlist for price drop`
-        );
         return;
     }
 
@@ -91,9 +79,6 @@ export const notifyPriceDrop = async (bookId, oldPrice, newPrice) => {
     );
 
     await Promise.all(notificationPromises);
-    console.log(
-        `Sent price drop notifications to ${users.length} users for book: ${book.name}`
-    );
 };
 
 export const notifyNewEdition = async (newBookId, authorName) => {
@@ -134,9 +119,6 @@ export const notifyNewEdition = async (newBookId, authorName) => {
     );
 
     await Promise.all(notificationPromises);
-    console.log(
-        `Sent new edition notifications to ${interestedUsers.length} users for book: ${newBook.name}`
-    );
 };
 
 export const notifyLowStock = async (bookId) => {
@@ -145,10 +127,9 @@ export const notifyLowStock = async (bookId) => {
         return;
     }
 
-    // FIX: Query nested 'book' field in wishlist array and change to 'query'
     const users = await findAll({
         model: User,
-        query: { "wishlist.book": bookId }, // ✅ Changed from 'filter' and query nested field
+        query: { "wishlist.book": bookId }, 
         select: "_id name",
     });
 
@@ -159,7 +140,7 @@ export const notifyLowStock = async (bookId) => {
     const notificationPromises = users.map((user) =>
         sendNotification({
             userId: user._id,
-            type: notificationType.LOW_STOCK, // ✅ Fixed: Use correct notification type
+            type: notificationType.LOW_STOCK, 
             title: "Low Stock Alert!",
             content: `Only ${book.stock} copies left of "${book.name}"! Order now before it's too late.`,
             data: {
@@ -174,7 +155,4 @@ export const notifyLowStock = async (bookId) => {
     );
 
     await Promise.all(notificationPromises);
-    console.log(
-        `Sent low stock notifications to ${users.length} users for book: ${book.name}`
-    );
 };

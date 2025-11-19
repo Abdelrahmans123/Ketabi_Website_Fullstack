@@ -227,24 +227,17 @@ export const handlePaymobCallback = async (req, res) => {
                     { session }
                 );
             }
-
-            console.log('order email: ', order.userEmail);
-            // Send success email
             await sendEmail({
                 to: order.userEmail,
                 subject: 'Payment Successful',
                 text: `Your payment for order ${order.orderNumber} was successful!`
             });
-
-            // Redirecting to frontend...
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
             const redirectUrl = `${frontendUrl}/my-library`;
-            // Redirect URL:', redirectUrl
 
             return res.redirect(302, redirectUrl);
 
         } else if (!isPending) {
-            // Payment pending
             order.paymentStatus = paymentStatus.PENDING;
             await order.save();
             return res.status(200).json({ message: 'Payment pending' });

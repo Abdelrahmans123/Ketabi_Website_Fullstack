@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { SocketService, UserStatus } from '../../../core/services/socket.service';
 import { ActivatedRoute } from '@angular/router';
-
+import Swal from 'sweetalert2';
 interface ChatMessage {
   content: string;
   from: string;
@@ -64,52 +64,48 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.currentUserName = this.authService.getCurrentUserName() || '';
     this.currentUserRole = this.authService.getCurrentUserRole() || '';
     const token = this.authService.getAccessToken() || '';
-
-    // FIXED: Set recipientId based on user role
     if (this.currentUserRole === 'admin') {
-      // For admin, get the user ID from route params or query params
       this.route.params.subscribe((params) => {
         const idFromParams = params['userId'] || params['id'];
         if (idFromParams) {
           this.recipientId = idFromParams;
-          console.log('Route params userId:', idFromParams);
           this.ensureConversation(this.recipientId);
           this.selectConversation(this.recipientId);
         }
       });
 
-      // If no userId in params, check query params
       if (!this.recipientId) {
         this.route.queryParams.subscribe((params) => {
           const idFromQuery = params['userId'] || params['id'];
           if (idFromQuery) {
             this.recipientId = idFromQuery;
-            console.log('Query params userId:', idFromQuery);
             this.ensureConversation(this.recipientId);
             this.selectConversation(this.recipientId);
           }
         });
       }
 
-      // TEMPORARY FIX FOR TESTING: If still no recipientId, you can hardcode a user ID
-      if (!this.recipientId) {
-        console.warn('No userId found in route. Admin needs to select a user to chat with.');
-        // Uncomment and add a real user ID for testing:
-        // this.recipientId = 'PUT_REAL_USER_ID_HERE';
-      }
-
-      this.recipientName = 'User'; // You can update this when you get user info
-      console.log('Admin chat initialized with recipientId:', this.recipientId);
+      this.recipientName = 'User';
     } else {
-      // For regular users, chat with admin
-      this.recipientId = this.authService.getAdminId() || '';
+      this.authService.getAdminId().subscribe({
+        next: (adminId) => {
+          this.recipientId = adminId;
+          console.log('🚀 ~ ChatComponent ~ recipientId:', this.recipientId);
+
+          // Now connect to socket after recipientId is set
+          this.initializeSocketConnection(token);
+        },
+        error: (error) => {
+          console.error('Failed to get admin ID:', error);
+          // Handle error - maybe show a notification
+          this.initializeSocketConnection(token);
+        },
+      });
+
       this.recipientName = 'Support';
-      console.log('User chat initialized with admin recipientId:', this.recipientId);
     }
 
     const serverUrl = 'http://localhost:3000';
-
-    // Subscribe to connection status
     this.subscriptions.push(
       this.socketService.connectionStatus$.subscribe((status) => {
         this.isConnected = status;
@@ -118,14 +114,9 @@ export class ChatComponent implements OnInit, OnDestroy {
         }
       })
     );
-
-    // Subscribe to new messages
     this.subscriptions.push(
       this.socketService.messages$.subscribe((message) => {
         this.userId = message.from;
-        console.log('Received new message:', message);
-
-        // Admin: handle multi-conversations
         if (this.currentUserRole === 'admin' && message.sendTo === this.currentUserId) {
           const fromUser = message.from;
           this.ensureConversation(fromUser);
@@ -147,17 +138,14 @@ export class ChatComponent implements OnInit, OnDestroy {
           } else {
             const prev = this.unreadByUser.get(fromUser) || 0;
             this.unreadByUser.set(fromUser, prev + 1);
-            this.markConversationsStale(); // ADD THIS
+            this.markConversationsStale();
           }
 
           if (!this.isChatOpen) {
             this.unreadCount++;
           }
-          return; // handled
+          return;
         }
-
-        // Non-admin (user) flow or admin message in current conversation
-        // Check if message is part of current conversation
         const isIncomingMessage =
           message.from === this.recipientId && message.sendTo === this.currentUserId;
         const isRelevantToConversation =
@@ -176,15 +164,11 @@ export class ChatComponent implements OnInit, OnDestroy {
         }
       })
     );
-
-    // Subscribe to success messages
     this.subscriptions.push(
       this.socketService.successMessages$.subscribe((message) => {
-        console.log('Message sent successfully:', message);
         if (this.currentUserRole == 'user') {
           this.userId = this.currentUserId;
         }
-        // FIXED: Only show if it's for this conversation
         if (message.sendTo === this.recipientId) {
           const msg: ChatMessage = {
             content: message.content,
@@ -194,7 +178,6 @@ export class ChatComponent implements OnInit, OnDestroy {
             isOwn: true,
           };
           this.addMessage(msg);
-          // Keep admin conversation store in sync
           if (this.currentUserRole === 'admin') {
             this.ensureConversation(this.recipientId);
             const conv = this.conversations.get(this.recipientId)!;
@@ -204,11 +187,10 @@ export class ChatComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Subscribe to user status
     this.subscriptions.push(
       this.socketService.userStatus$.subscribe((status) => {
         this.onlineUsers.set(status.userId, status);
-        this.markConversationsStale(); // ADD THIS
+        this.markConversationsStale();
 
         if (this.currentUserRole === 'admin' && status.userId !== this.currentUserId) {
           this.ensureConversation(status.userId);
@@ -222,49 +204,42 @@ export class ChatComponent implements OnInit, OnDestroy {
         ) {
           this.ensureConversation(status.userId);
           this.selectConversation(status.userId);
-          console.log('Auto-selected first online user for admin:', this.recipientId);
         }
       })
     );
-
-    // Subscribe to user status changes?
-
-    // this.subscriptions.push(
-    //   this.socketService.userStatusChanged$.subscribe((status: UserStatus) => {
-    //     this.onlineUsers.set(status.userId, status);
-    //   })
-    // );
-
-    // Subscribe to system messages
     this.subscriptions.push(
       this.socketService.systemMessages$.subscribe((msg) => {
         this.addSystemMessage(msg.message);
       })
     );
-
-    // Subscribe to errors
     this.subscriptions.push(
       this.socketService.errors$.subscribe((error) => {
         console.error('Chat error:', error);
       })
     );
-
-    // Subscribe to typing status
     this.subscriptions.push(
       this.socketService.typing$.subscribe((status) => {
-        // Only show typing if it's from the current recipient
         if (status.userId === this.recipientId) {
           this.isRecipientTyping = status.isTyping;
-          console.log(`${status.userName} is ${status.isTyping ? 'typing' : 'not typing'}...`);
         }
       })
     );
-
-    // Connect to socket AFTER subscriptions are set up to avoid missing early presence snapshots
     this.socketService.connect(serverUrl, token);
   }
   private markConversationsStale(): void {
     this._conversationsNeedUpdate = true;
+  }
+  private initializeSocketConnection(token: string): void {
+  const serverUrl = 'http://localhost:3000';
+  
+  this.subscriptions.push(
+    this.socketService.connectionStatus$.subscribe((status) => {
+      this.isConnected = status;
+      if (status) {
+        this.socketService.register('User connected');
+      }
+    })
+  );
   }
   ngOnDestroy(): void {
     if (this.typingTimeout) {
@@ -276,8 +251,6 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   toggleChat(): void {
     this.isChatOpen = !this.isChatOpen;
-
-    // Reset unread count when opening chat
     if (this.isChatOpen) {
       this.unreadCount = 0;
       setTimeout(() => this.scrollToBottom(), 100);
@@ -297,22 +270,24 @@ export class ChatComponent implements OnInit, OnDestroy {
         currentUserId: this.currentUserId,
         currentUserRole: this.currentUserRole,
       });
-      alert('Please enter a message and ensure recipient is set');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: 'Please enter a message and ensure recipient is set',
+        confirmButtonText: 'OK',
+      });
       return;
     }
 
     if (!this.isConnected) {
-      alert('Not connected to chat server');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: 'Not connected to chat server',
+        confirmButtonText: 'OK',
+      });
       return;
     }
-
-    console.log('Sending message:', {
-      from: this.currentUserId,
-      to: this.recipientId,
-      content: this.messageInput.trim(),
-    });
-
-    // Stop typing indicator when sending
     this.onTypingStop();
 
     this.socketService.sendMessage(this.recipientId, this.messageInput.trim());
@@ -322,15 +297,12 @@ export class ChatComponent implements OnInit, OnDestroy {
   onMessageInput(): void {
     if (!this.recipientId) return;
 
-    // Emit typing start
     this.socketService.emitTyping(this.recipientId, true);
 
-    // Clear existing timeout
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
     }
 
-    // Set timeout to stop typing after 2 seconds of inactivity
     this.typingTimeout = setTimeout(() => {
       this.onTypingStop();
     }, 2000);
@@ -355,7 +327,6 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.systemMessages.push(message);
   }
 
-  // Admin helpers
   private ensureConversation(userId: string): void {
     if (!userId) return;
     const wasNew = !this.conversations.has(userId);
@@ -366,10 +337,9 @@ export class ChatComponent implements OnInit, OnDestroy {
       this.unreadByUser.set(userId, 0);
     }
     if (wasNew) {
-      this.markConversationsStale(); // ADD THIS
+      this.markConversationsStale();
     }
   }
-  // Keep everything else the same, just rename the method
   get userConversations(): Array<{
     userId: string;
     name: string;
@@ -419,11 +389,10 @@ export class ChatComponent implements OnInit, OnDestroy {
     const conv = this.conversations.get(userId)!;
     this.messages = [...conv];
 
-    // Reset unread and mark stale if there were unread messages
     const hadUnread = this.unreadByUser.get(userId) || 0;
     this.unreadByUser.set(userId, 0);
     if (hadUnread > 0) {
-      this.markConversationsStale(); // ADD THIS
+      this.markConversationsStale();
     }
 
     setTimeout(() => this.scrollToBottom(), 50);

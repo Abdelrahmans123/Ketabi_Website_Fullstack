@@ -24,10 +24,7 @@ export class BookListComponent implements OnInit {
     this.bookService.getAllBooks().subscribe({
       next: (response) => {
         this.books = response.data.books;
-        console.log('🚀 ~ BookListComponent ~ fetchBooks ~ books:', this.books);
-
         this.isLoading = false;
-        console.log('Books loaded:', this.books);
       },
       error: (error) => {
         this.errorMessage = 'Failed to load books.';

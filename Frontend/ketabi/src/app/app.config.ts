@@ -28,7 +28,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideHttpClient(withFetch(), withInterceptors([jwtInterceptor, AuthInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([jwtInterceptor])),
     importProvidersFrom(SocialLoginModule),
     {
       provide: 'SocialAuthServiceConfig',

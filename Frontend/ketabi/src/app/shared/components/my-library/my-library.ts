@@ -54,13 +54,11 @@ export class MyLibrary implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    console.log('MyLibrary Component initialized');
 
     const isAuthenticated = this.authService.isAuthenticated();
-    console.log('Is Authenticated:', isAuthenticated);
 
     if (!isAuthenticated) {
-      this.error = '❌ Please login to view your library';
+      this.error = 'Please login to view your library';
       return;
     }
 
@@ -76,13 +74,11 @@ export class MyLibrary implements OnInit, OnDestroy {
     this.isLoading = true;
     this.error = null;
 
-    console.log('Loading purchased books...');
 
     this.orderService.getLibrary(1, 100)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Orders loaded:', response);
           this.ebooksLibrary(response.data || []);
           this.isLoading = false;
         },

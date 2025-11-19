@@ -1,4 +1,3 @@
-
 import { Server } from "socket.io";
 import AppError from "../utils/AppError.js";
 import { verifyAccessToken } from "../utils/jwt.js";
@@ -7,7 +6,7 @@ import { registerSocket } from "./Chat/ChatController.js";
 let io;
 export const connectedSockets = new Map();
 
-export const connectedUsersInfo = new Map(); 
+export const connectedUsersInfo = new Map();
 
 export const initializeIO = (server) => {
     io = new Server(server, {
@@ -21,7 +20,6 @@ export const initializeIO = (server) => {
     io.use((socket, next) => {
         try {
             const authToken = socket.handshake.headers.authtoken;
-            console.log("Received authToken:", socket.handshake.headers);
             if (!authToken || !authToken.startsWith("Bearer ")) {
                 console.error("Missing or invalid token format");
                 return next(new Error("Unauthorized"));
@@ -50,8 +48,6 @@ export const initializeIO = (server) => {
             }
             socket.user = user;
             socket.isFirstConnection = isFirstConnection;
-
-            console.log(`User ${user.id} authenticated successfully`);
             next();
         } catch (err) {
             console.error("Authentication error:", err.message);
@@ -60,12 +56,14 @@ export const initializeIO = (server) => {
     });
 
     io.on("connection", (socket) => {
-        console.log(`User ${socket.user.id} connected`);
         socket.join(socket.user.id);
         socket.emit("userStatus", {
             userId: socket.user.id,
             status: "online",
             name: socket.user.name,
+        });
+        socket.on("authenticate", (userId) => {
+            socket.join(`user_${userId}`);
         });
         for (const [uid, info] of connectedUsersInfo.entries()) {
             if (uid === socket.user.id) continue;
@@ -104,7 +102,7 @@ export const initializeIO = (server) => {
 
         if (socket.user.role === "admin") {
             for (const [uid, tabs] of connectedSockets.entries()) {
-                if (uid === socket.user.id) continue; 
+                if (uid === socket.user.id) continue;
                 const info = connectedUsersInfo.get(uid);
                 if (info?.role !== "admin") {
                     tabs.forEach((tabId) => {
@@ -131,7 +129,6 @@ export const initializeIO = (server) => {
         }
         registerSocket(socket, io);
         socket.on("disconnect", () => {
-            console.log(`User ${socket.user.id} disconnected`);
             const remainingUserTabs =
                 connectedSockets
                     .get(socket.user.id)

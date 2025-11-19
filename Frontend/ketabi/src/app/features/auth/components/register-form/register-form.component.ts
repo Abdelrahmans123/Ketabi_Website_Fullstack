@@ -11,6 +11,7 @@ import {
   SimpleChanges,
   OnInit,
 } from '@angular/core';
+import Swal from 'sweetalert2';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -95,11 +96,9 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
   constructor(private socialAuthService: SocialAuthService) {}
 
   ngOnInit() {
-    // Subscribe to social auth state changes (auto-detect when user signs in)
     this.authStateSubscription = this.socialAuthService.authState.subscribe({
       next: (user: SocialUser) => {
         if (user) {
-          console.log('Social user detected:', user);
           this.handleSocialUser(user);
         }
       },
@@ -110,30 +109,23 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
   }
 
   ngAfterViewInit() {
-    // Auto-focus first OTP input when OTP section appears
     if (this.showOtpInput) {
       this.focusFirstOtpInput();
     }
   }
 
   ngOnDestroy() {
-    // Clean up timer interval
     this.clearResendTimer();
-
-    // Clean up auth state subscription
     if (this.authStateSubscription) {
       this.authStateSubscription.unsubscribe();
     }
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    // Focus first OTP input when showOtpInput changes to true
     if (changes['showOtpInput'] && this.showOtpInput) {
       setTimeout(() => this.focusFirstOtpInput(), 200);
     }
   }
-
-  // Handle social user from auth state
   private handleSocialUser(user: SocialUser) {
     const provider = user.provider.toLowerCase() as 'google' | 'facebook';
 
@@ -151,29 +143,19 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
 
     this.socialLogin.emit(socialData);
   }
-
-  // Toggle password visibility
   togglePassword() {
     this.showPassword = !this.showPassword;
   }
-
-  // Toggle confirm password visibility
   toggleConfirmPassword() {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
-
-  // Get password strength
   getPasswordStrength(): string {
     const password = this.userData.password;
     if (!password) return '';
 
     let strength = 0;
-
-    // Length check
     if (password.length >= 8) strength++;
     if (password.length >= 12) strength++;
-
-    // Character variety checks
     if (/[a-z]/.test(password)) strength++;
     if (/[A-Z]/.test(password)) strength++;
     if (/[0-9]/.test(password)) strength++;
@@ -184,7 +166,6 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
     return 'strong';
   }
 
-  // Get password strength text
   getPasswordStrengthText(): string {
     const strength = this.getPasswordStrength();
     switch (strength) {
@@ -199,7 +180,6 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
     }
   }
 
-  // Handle registration form submission
   onSubmit() {
     if (!this.acceptTerms) {
       this.errorMessage = 'Please accept the terms and conditions';
@@ -211,7 +191,6 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
       return;
     }
 
-    // Emit to parent - don't call services directly
     this.submitRegister.emit({
       name: this.userData.name,
       email: this.userData.email,
@@ -226,20 +205,18 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
     this.socialAuthService
       .signIn(GoogleLoginProvider.PROVIDER_ID)
       .then((user: SocialUser) => {
-        console.log('Google sign-in successful:', user);
-        console.log('ID Token:', user.idToken);
-        console.log('Auth Token:', user.authToken);
-
-        // Validate that we have an ID token
         if (!user.idToken) {
           console.error('No ID token received from Google');
-          alert('Failed to get authentication token from Google. Please try again.');
+          Swal.fire({
+            icon: 'error',
+            title: 'Authentication Error',
+            text: 'Failed to get authentication token from Google. Please try again.',
+          });
           return;
         }
 
-        // Emit the event to parent component
         this.socialLogin.emit({
-          token: user.idToken, // Use idToken for Google
+          token: user.idToken, 
           userData: {
             email: user.email || '',
             name: user.name || '',
@@ -260,11 +237,17 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
             error.message?.includes('popup') ||
             error.message?.includes('blocked'))
         ) {
-          alert(
-            'Popup was blocked! Please disable your popup blocker or ad blocker and try again.'
-          );
+          Swal.fire({
+            icon: 'warning',
+            title: 'Sign-in Cancelled',
+            text: 'You closed the sign-in popup before completing the process.',
+          });
         } else {
-          alert('Google sign-in failed. Please try again or use email registration.');
+          Swal.fire({
+            icon: 'error',
+            title: 'Sign-in Failed',
+            text: 'Google sign-in failed. Please try again or use email registration.',
+          });
         }
       });
   }
@@ -279,7 +262,11 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
         // Validate that we have an auth token
         if (!user.authToken) {
           console.error('No auth token received from Facebook');
-          alert('Failed to get authentication token from Facebook. Please try again.');
+          Swal.fire({
+            icon: 'error',
+            title: 'Authentication Error',
+            text: 'Failed to get authentication token from Facebook. Please try again.',
+          });
           return;
         }
 
@@ -297,12 +284,15 @@ export class RegisterFormComponent implements OnInit, AfterViewInit, OnDestroy, 
       })
       .catch((error) => {
         console.error('Facebook sign-in error:', error);
-        alert('Facebook sign-in failed. Please try again or use email registration.');
+        Swal.fire({
+          icon: 'error',
+          title: 'Sign-in Failed',
+          text: 'Facebook sign-in failed. Please try again or use email registration.',
+        });
       });
   }
 
   // Also update the handleSocialUser method for the authState subscription
-
 
   // Handle social login errors with user-friendly messages
   private handleSocialLoginError(error: any, provider: string) {

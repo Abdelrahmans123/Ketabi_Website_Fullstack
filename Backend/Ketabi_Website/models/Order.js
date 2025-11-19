@@ -82,7 +82,6 @@ orderSchema.pre('save', async function (next) {
                 { new: true, upsert: true }
             );
             this.orderNumber = `${counter.seq}${Date.now().toString().slice(-6)}`;
-            console.log('Generated order number:', this.orderNumber);
         } catch (error) {
             console.error('Error generating order number:', error);
             return next(new Error('Failed to generate order number: ' + error.message));

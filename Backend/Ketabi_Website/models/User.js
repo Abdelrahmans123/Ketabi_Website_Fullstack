@@ -41,7 +41,6 @@ const userSchema = new mongoose.Schema(
         gender: {
             type: String,
             enum: Object.values(genderEnum),
-            required: true,
         },
         confirmEmail: Date,
         confirmEmailOtp: {

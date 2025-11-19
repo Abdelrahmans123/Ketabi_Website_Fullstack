@@ -4,7 +4,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, from, Observable, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   LoginRequest,
@@ -52,21 +52,10 @@ export class AuthService {
     private socialAuthService: SocialAuthService,
     private notificationService: NotificationService
   ) {
-    console.log('🔵 AuthService initialized');
-    console.log('Initial auth state:', this.isAuthenticatedSubject.value);
-    console.log('Initial user:', this.currentUserSubject.value);
-
-    // IMPORTANT: Delay session validity check to prevent reload crashes
-    // This allows the page to fully load before running checks
     this.checkSessionValidity();
-
-    // Listen for storage events from other tabs
     this.listenToStorageEvents();
   }
 
-  // ==========================================
-  // SESSION MANAGEMENT
-  // ==========================================
   getCurrentUserId(): string | null {
     const user = this.currentUserSubject.value;
     return user ? user.id : null;
@@ -78,71 +67,45 @@ export class AuthService {
     const user = this.currentUserSubject.value;
     return user ? user.name : null;
   }
-  getAdminId(): string | null {
-    // Assuming admin ID is fixed; replace with actual logic if needed
-    return '68eb55652688714915d79019';
+  getAdminId(): Observable<string> {
+    return this.http.get<{ adminId: string }>(`${this.API_URL}/admin/id`).pipe(
+      map((response) => response.adminId),
+      catchError((error) => {
+        console.error('Error fetching admin ID:', error);
+        return throwError(() => error);
+      })
+    );
   }
   private listenToStorageEvents(): void {
-    // Only run in browser environment
     if (typeof window === 'undefined') {
       return;
     }
 
     window.addEventListener('storage', (event: StorageEvent) => {
       try {
-        console.log('🔔 Storage event detected:', {
-          key: event.key,
-          oldValue: event.oldValue?.substring(0, 50),
-          newValue: event.newValue?.substring(0, 50),
-          currentSessionId: this.currentSessionId,
-        });
-
-        // IMPORTANT: Ignore storage events if we're currently logging in
         if (this.isLoggingIn) {
-          console.log('⚪ Ignoring storage event - login in progress');
           return;
         }
-
-        // Ignore events during page reload (within first 2 seconds)
         const timeSinceInit = Date.now() - (this.initTime || Date.now());
         if (timeSinceInit < 2000) {
-          console.log('⚪ Ignoring storage event - page just loaded');
           return;
         }
-
-        // Detect when active session changes in another tab
         if (event.key === this.ACTIVE_SESSION_KEY) {
           const newActiveSession = event.newValue;
           const oldActiveSession = event.oldValue;
-
-          // Only process if both old and new sessions exist
           if (!newActiveSession || !oldActiveSession) {
             return;
           }
-
-          // If a NEW session is created and this tab has an OLD session
           if (
             newActiveSession !== oldActiveSession &&
             this.currentSessionId &&
             this.currentSessionId === oldActiveSession
           ) {
-            console.log('🔴 New login detected in another tab.');
-            console.log('My session:', this.currentSessionId);
-            console.log('Old session:', oldActiveSession);
-            console.log('New session:', newActiveSession);
-
-            // Check if it's the same user before logging out
             try {
               const token = localStorage.getItem(this.TOKEN_KEY);
               if (token) {
                 const decoded: any = jwtDecode(token);
                 const currentUserId = decoded._id || decoded.id || decoded.userId || decoded.sub;
-
-                // For now, allow same user multiple sessions
-                // Uncomment below to enforce single session per user
-                // this.handleForcedLogout();
-
-                console.log('✅ Same user detected, allowing multiple sessions');
               }
             } catch (error) {
               console.error('Error checking user ID:', error);
@@ -150,25 +113,17 @@ export class AuthService {
           }
         }
 
-        // Detect when tokens are removed (logout in another tab)
         if (event.key === this.TOKEN_KEY && event.oldValue && !event.newValue) {
-          console.log('🔴 Logout detected in another tab.');
           this.handleForcedLogout();
         }
       } catch (error) {
         console.error('❌ Error in storage event listener:', error);
-        // Don't crash - just log the error
       }
     });
   }
   private initTime = Date.now();
 
-  // Make handleForcedLogout safer
-
-  // Add this method to your AuthService class
-
   getCurrentUserRole(): string | null {
-    // Or if you decode it from the token:
     const token = this.getAccessToken();
     if (token) {
       const decoded = this.decodeToken(token);
@@ -178,84 +133,50 @@ export class AuthService {
   }
   private checkSessionValidity(): void {
     try {
-      // Don't check if we're currently logging in
       if (this.isLoggingIn) {
-        console.log('⚪ Skipping session check - login in progress');
         return;
       }
 
       const activeSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
       const storedSessionId = localStorage.getItem(this.SESSION_ID_KEY);
       const token = localStorage.getItem(this.TOKEN_KEY);
-
-      console.log('🔍 Checking session validity:', {
-        activeSession,
-        storedSessionId,
-        hasToken: !!token,
-        currentSessionId: this.currentSessionId,
-        isLoggingIn: this.isLoggingIn,
-      });
-
-      // Set current session ID if it exists
       if (storedSessionId) {
         this.currentSessionId = storedSessionId;
       }
-
-      // Only check validity if we have a stored session and token
-      // If there's no token, this is likely a fresh page load before login
       if (!token || !storedSessionId) {
-        console.log('⚪ No existing session found - fresh start');
         return;
       }
-
-      // Verify token is not expired
       if (!this.hasValidToken()) {
-        console.log('⚠️ Token expired on reload');
+        console.log('Token expired on reload');
         this.clearAuthData();
         return;
       }
-
-      // If there's an active session and it's different from ours,
-      // only log out if we're in a browser environment (not during SSR)
       if (
         typeof window !== 'undefined' &&
         activeSession &&
         storedSessionId &&
         activeSession !== storedSessionId
       ) {
-        console.log('🔴 A newer session exists. Checking if same user...');
-
         try {
-          // Get current user from token
           const currentUser = this.getUserFromToken();
 
           if (currentUser) {
-            console.log('✅ Valid session found for user:', currentUser.name);
-            // Update the session to current one if valid
             this.currentSessionId = storedSessionId;
             localStorage.setItem(this.ACTIVE_SESSION_KEY, storedSessionId);
           } else {
-            console.log('⚠️ Could not verify user from token');
+            console.log('Could not verify user from token');
           }
         } catch (error) {
           console.error('Error verifying session:', error);
         }
-      } else {
-        console.log('✅ Session is valid and active');
       }
     } catch (error) {
-      console.error('❌ Error in checkSessionValidity:', error);
-      // Don't crash - just log the error
+      console.error('Error in checkSessionValidity:', error);
     }
   }
   private handleForcedLogout(): void {
-    // Clear local data without calling backend
     this.clearAuthData();
-
-    // Show notification (optional)
     this.showLogoutNotification();
-
-    // Redirect to login
     this.router.navigate(['/auth/login'], {
       queryParams: { reason: 'session_expired' },
     });
@@ -268,42 +189,16 @@ export class AuthService {
     );
   }
 
-  // ==========================================
-  // TOKEN MANAGEMENT
-  // ==========================================
-
   setTokens(accessToken: string, refreshToken: string): void {
-    console.log('🔵 setTokens called');
-
-    // Mark that we're actively logging in
     this.isLoggingIn = true;
-
-    // Generate new session ID
     this.currentSessionId = this.generateSessionId();
-
-    // IMPORTANT: Set all data atomically to prevent race conditions
-    // First update the active session to claim this as the new active session
     localStorage.setItem(this.ACTIVE_SESSION_KEY, this.currentSessionId);
-
-    // Then set tokens and session info
     localStorage.setItem(this.TOKEN_KEY, accessToken);
     localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     localStorage.setItem(this.SESSION_ID_KEY, this.currentSessionId);
-
-    // Decode token and extract user info
     const user = this.getUserFromToken();
-    console.log('✅ User extracted from token:', user);
-
-    // Update both subjects
     this.isAuthenticatedSubject.next(true);
     this.currentUserSubject.next(user);
-
-    console.log('✅ Auth state updated');
-    console.log('✅ isAuthenticated:', this.isAuthenticatedSubject.value);
-    console.log('✅ currentUser:', this.currentUserSubject.value);
-    console.log('✅ Session ID:', this.currentSessionId);
-
-    // Clear the login flag after a short delay
     setTimeout(() => {
       this.isLoggingIn = false;
     }, 500);
@@ -321,27 +216,19 @@ export class AuthService {
     this.accessTokenSubject.next(token);
   }
 
-  // ==========================================
-  // USER MANAGEMENT
-  // ==========================================
-
   getCurrentUser(): IUser | null {
     return this.getUserFromToken();
   }
 
-  // Extract user from JWT token
   private getUserFromToken(): IUser | null {
     const token = this.getAccessToken();
     if (!token) {
-      console.log('⚠️ No token found');
       return null;
     }
 
     try {
       const decoded: any = jwtDecode(token);
-      console.log('🔍 Decoded token:', decoded);
 
-      // Map token payload to IUser interface
       const user: IUser = {
         id: decoded._id || decoded.id || decoded.userId || decoded.sub,
         name: decoded.name || `${decoded.firstName || ''} ${decoded.lastName || ''}`.trim(),
@@ -351,18 +238,12 @@ export class AuthService {
         gender: decoded.gender || '',
         address: decoded.address || '',
       };
-
-      console.log('✅ User object created from token:', user);
       return user;
     } catch (error) {
       console.error('❌ Error decoding token:', error);
       return null;
     }
   }
-
-  // ==========================================
-  // AUTHENTICATION CHECKS
-  // ==========================================
 
   isAuthenticated(): boolean {
     return this.hasValidToken();
@@ -384,13 +265,11 @@ export class AuthService {
       const isValid = payload.exp > currentTime;
 
       if (!isValid) {
-        console.warn('⚠️ Token expired');
         this.clearAuthData();
       }
 
       return isValid;
     } catch {
-      console.warn('⚠️ Invalid token');
       return false;
     }
   }
@@ -418,58 +297,32 @@ export class AuthService {
     return null;
   }
 
-  // ==========================================
-  // AUTH SUCCESS HANDLER
-  // ==========================================
-
   private handleAuthSuccess(response: any): void {
-    console.log('🔵 handleAuthSuccess called with:', response);
-
     if (response.data?.accessToken) {
-      console.log('✅ Access token found');
       this.setTokens(response.data.accessToken, response.data.refreshToken);
     } else {
-      console.warn('⚠️ No access token in response');
+      console.warn('No access token in response');
     }
   }
 
-  // ==========================================
-  // CLEAR AUTH DATA
-  // ==========================================
-
   clearAuthData(): void {
     try {
-      console.log('🔵 Clearing auth data');
-
-      // Get current active session before clearing
       const currentActiveSession = localStorage.getItem(this.ACTIVE_SESSION_KEY);
-
-      // Clear tokens and session ID
       localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.REFRESH_TOKEN_KEY);
       localStorage.removeItem(this.SESSION_ID_KEY);
-
-      // Only clear activeSession if it belongs to this tab
       if (currentActiveSession === this.currentSessionId) {
         localStorage.removeItem(this.ACTIVE_SESSION_KEY);
-        console.log('✅ Cleared active session (was mine)');
-      } else {
-        console.log('⚪ Kept active session (belongs to another tab)');
       }
 
       this.currentSessionId = null;
       this.currentUserSubject.next(null);
       this.isAuthenticatedSubject.next(false);
       this.hasLogOutSubject.next(true);
-      console.log('✅ Auth data cleared');
     } catch (error) {
-      console.error('❌ Error clearing auth data:', error);
+      console.error('Error clearing auth data:', error);
     }
   }
-
-  // ==========================================
-  // LOGIN METHODS
-  // ==========================================
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.http
@@ -478,7 +331,6 @@ export class AuthService {
       })
       .pipe(
         tap((response) => {
-          console.log('🔵 Login response:', response);
           if (response.data?.accessToken) {
             this.handleAuthSuccess(response);
           }
@@ -496,16 +348,11 @@ export class AuthService {
       )
       .pipe(
         tap((response) => {
-          console.log('🔵 Confirm login response:', response);
           this.handleAuthSuccess(response);
         }),
         catchError(this.handleError.bind(this))
       );
   }
-
-  // ==========================================
-  // SOCIAL LOGIN METHODS
-  // ==========================================
 
   loginWithGmail(socialData: SocialLoginData): Observable<any> {
     return this.http
@@ -514,7 +361,6 @@ export class AuthService {
       })
       .pipe(
         tap((response: any) => {
-          console.log('🔵 Google login response:', response);
           if (response.data?.accessToken) {
             this.handleAuthSuccess(response);
           }
@@ -531,7 +377,6 @@ export class AuthService {
       })
       .pipe(
         tap((response: any) => {
-          console.log('🔵 Google register response:', response);
           if (response.data?.accessToken) {
             this.handleAuthSuccess(response);
           }
@@ -547,7 +392,6 @@ export class AuthService {
       })
       .pipe(
         tap((response: any) => {
-          console.log('🔵 Facebook login response:', response);
           if (response.data?.accessToken) {
             this.handleAuthSuccess(response);
           }
@@ -564,7 +408,6 @@ export class AuthService {
       })
       .pipe(
         tap((response: any) => {
-          console.log('🔵 Facebook register response:', response);
           if (response.data?.accessToken) {
             this.handleAuthSuccess(response);
           }
@@ -587,10 +430,6 @@ export class AuthService {
         catchError(this.handleError.bind(this))
       );
   }
-
-  // ==========================================
-  // REGISTER & OTHER METHODS
-  // ==========================================
 
   register(data: RegisterRequest): Observable<RegisterResponse> {
     return this.http
@@ -705,8 +544,6 @@ export class AuthService {
 
   redirectToDashboard(): void {
     const role = this.getUserRole();
-    console.log('🔵 Redirecting to dashboard, role:', role);
-
     switch (role) {
       case 'admin':
         this.router.navigate(['/admin/dashboard']);
@@ -718,13 +555,12 @@ export class AuthService {
         this.router.navigate(['/home']);
         break;
       default:
-        console.warn('⚠️ Unknown role, redirecting to home');
         this.router.navigate(['/']);
     }
   }
 
   private handleError(error: any): Observable<never> {
-    console.error('❌ An error occurred:', error);
+    console.error('An error occurred:', error);
     return throwError(() => error);
   }
 

@@ -94,12 +94,9 @@ export class HomeComponent implements OnInit {
 
     this.bookService.getBooksByCategory(category).subscribe({
       next: (response) => {
-        console.log('🚀 ~ DashboardComponent ~ loadBooksByCategory ~ response:', response);
         if (response.status === 'success') {
           const data = response.data;
-          // Ensure this.books is always an array: wrap single Book into an array
           this.books = Array.isArray(data) ? data : [data];
-          console.log('🚀 ~ DashboardComponent ~ loadBooksByCategory ~ response:', response);
         } else {
           this.error = response.message;
         }

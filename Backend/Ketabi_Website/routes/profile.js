@@ -148,7 +148,6 @@
  *         description: Forbidden - Admin or Publisher role required
  */
 
-
 import express from "express";
 import {
     getProfile,
@@ -159,10 +158,15 @@ import {
     getWishlist,
     sendResponse,
     getResponses,
+    getAllResponses,
+    updateResponse,
+    deleteResponse,
 } from "../controllers/ProfileController.js";
-import { authenticate } from "../middlewares/auth.js";  
+import { authenticate } from "../middlewares/auth.js";
 import { updateProfileSchema } from "../validations/updateprofile.js";
 import { validate } from "../middlewares/validation.js";
+import { authorize } from "../middlewares/authorization.js";
+import { roleEnum } from "../utils/roleEnum.js";
 
 const router = express.Router();
 
@@ -175,5 +179,22 @@ router.get("/wishlist", authenticate, getWishlist);
 router.post("/wishlist", authenticate, addToWishlist);
 router.delete("/wishlist/:bookId", authenticate, removeFromWishlist);
 router.post("/responses", authenticate, sendResponse);
-router.get("/responses", authenticate, getResponses);
+router.get(
+    "/responses",
+    authenticate,
+    authorize(roleEnum.admin),
+    getAllResponses
+);
+router.patch(
+    "/responses/:id",
+    authenticate,
+    authorize(roleEnum.admin),
+    updateResponse
+);
+router.delete(
+    "/responses/:id",
+    authenticate,
+    authorize(roleEnum.admin),
+    deleteResponse
+);
 export default router;

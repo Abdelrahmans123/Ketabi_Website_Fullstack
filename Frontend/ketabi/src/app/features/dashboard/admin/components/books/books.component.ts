@@ -7,7 +7,9 @@ import { takeUntil } from 'rxjs/operators';
 import { BookService } from '../../../../../core/services/book.service';
 import { ChatComponent } from '../../../../../shared/components/chat/chat.component';
 import { Book } from '../../../../../core/models/book.model';
-
+import Swal from 'sweetalert2';
+import { SidebarComponent } from '../../../../../shared/components/sidebar/sidebar.component';
+import { TopbarComponent } from '../../../../../shared/components/topbar/topbar.component';
 interface ExtendedBook extends Book {
   selected?: boolean;
   genreName?: string;
@@ -30,7 +32,14 @@ interface Genre {
 @Component({
   selector: 'app-books',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ChatComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    ChatComponent,
+    SidebarComponent,
+    TopbarComponent,
+  ],
   templateUrl: './books.component.html',
   styleUrl: './books.component.css',
 })
@@ -98,16 +107,6 @@ export class BooksComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
-  toggleSidebar() {
-    this.sidebarCollapsed = !this.sidebarCollapsed;
-  }
-
-  logout() {
-    console.log('Logging out...');
-    this.router.navigate(['/login']);
-  }
-
   loadBooks() {
     this.loading = true;
     this.errorMessage = '';
@@ -117,7 +116,6 @@ export class BooksComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('📥 Books API Response:', response);
 
           if (response.status && response.data.books) {
             this.books = response.data.books.map((book) => ({
@@ -132,10 +130,6 @@ export class BooksComponent implements OnInit, OnDestroy {
               description: book.description || '',
               selected: false,
             }));
-
-            console.log('✅ Processed books:', this.books.length);
-
-            // Extract unique genres
             const genreMap = new Map<string, Genre>();
             this.books.forEach((book) => {
               if (book.genre && book.genre._id && book.genre.name) {
@@ -360,8 +354,17 @@ export class BooksComponent implements OnInit, OnDestroy {
     this.showBookModal = true;
   }
 
-  deleteBook(book: ExtendedBook) {
-    if (confirm(`Are you sure you want to delete "${book.name}"?`)) {
+  async deleteBook(book: ExtendedBook) {
+    const confirmResult = Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to delete the book "${book.name}"? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+    });
+
+    if ((await confirmResult).isConfirmed) {
       this.bookService
         .deleteBook(book._id)
         .pipe(takeUntil(this.destroy$))
@@ -369,16 +372,27 @@ export class BooksComponent implements OnInit, OnDestroy {
           next: (response) => {
             if (response.message) {
               this.loadBooks();
-              console.log('✅ Book deleted successfully');
             } else {
-              alert(response.message || 'Failed to delete book');
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: response.message || 'Failed to delete book',
+                confirmButtonText: 'OK',
+              });
             }
           },
           error: (error) => {
             console.error('❌ Error deleting book:', error);
-            alert(error.error?.message || 'Failed to delete book');
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: error.error?.message || 'Failed to delete book. Please try again.',
+              confirmButtonText: 'OK',
+            });
           },
         });
+    } else {
+      // Book deletion cancelled
     }
   }
 
@@ -411,7 +425,12 @@ export class BooksComponent implements OnInit, OnDestroy {
   saveBook() {
     if (this.modalMode === 'add') {
       if (!this.selectedBook.name || !this.selectedBook.author || !this.selectedBook.price) {
-        alert('Please fill in all required fields');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Warning',
+          text: 'Please fill in all required fields',
+          confirmButtonText: 'OK',
+        });
         return;
       }
 
@@ -423,14 +442,23 @@ export class BooksComponent implements OnInit, OnDestroy {
             if (response.status === 'success') {
               this.loadBooks();
               this.closeModal();
-              console.log('✅ Book added successfully');
             } else {
-              alert(response.status || 'Failed to create book');
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: response.status || 'Failed to create book',
+                confirmButtonText: 'OK',
+              });
             }
           },
           error: (error) => {
             console.error('❌ Error creating book:', error);
-            alert(error.error?.message || 'Failed to create book');
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: error.error?.message || 'Failed to create book',
+              confirmButtonText: 'OK',
+            });
           },
         });
     } else if (this.modalMode === 'edit') {
@@ -442,14 +470,23 @@ export class BooksComponent implements OnInit, OnDestroy {
             if (response.status === 'success') {
               this.loadBooks();
               this.closeModal();
-              console.log('✅ Book updated successfully');
             } else {
-              alert(response.status || 'Failed to update book');
+              Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: response.status || 'Failed to update book',
+                confirmButtonText: 'OK',
+              });
             }
           },
           error: (error) => {
             console.error('❌ Error updating book:', error);
-            alert(error.error?.message || 'Failed to update book');
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: error.error?.message || 'Failed to update book',
+              confirmButtonText: 'OK',
+            });
           },
         });
     }

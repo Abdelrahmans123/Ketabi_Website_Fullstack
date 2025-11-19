@@ -12,6 +12,8 @@ export const notificationType = {
     PAYMENT_SUCCESS: "PAYMENT_SUCCESS",
     PAYMENT_FAILED: "PAYMENT_FAILED",
     PAYMENT_REFUNDED: "PAYMENT_REFUNDED",
+    RESPONSE_APPROVED: "RESPONSE_APPROVED",
+    RESPONSE_REJECTED: "RESPONSE_REJECTED",
 };
 export const notificationPriority = {
     LOW: "low",

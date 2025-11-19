@@ -30,9 +30,10 @@ export interface UpdateResponseDTO {
 }
 
 export interface ApiResponse<T> {
-  success: boolean;
+  status: 'success' | 'error' | 'fail'; 
   message: string;
   data: T;
+  code?: number;
 }
 
 @Injectable({

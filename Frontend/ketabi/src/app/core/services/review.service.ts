@@ -22,17 +22,14 @@ export class ReviewService {
     }
 
     createReview(data: CreateReviewRequest): Observable<ReviewResponse> {
-        console.log('Creating review:', data);
         return this.http.post<ReviewResponse>(`${this.apiUrl}`, data);
     }
 
     updateReview(id: string, data: UpdateReviewRequest): Observable<ReviewResponse> {
-        console.log('Updating review:', id, data);
         return this.http.patch<ReviewResponse>(`${this.apiUrl}/${id}`, data);
     }
 
     deleteReview(id: string): Observable<ReviewResponse> {
-        console.log('Deleting review:', id);
         return this.http.delete<ReviewResponse>(`${this.apiUrl}/${id}`);
     }
 

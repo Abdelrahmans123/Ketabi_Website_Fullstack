@@ -299,7 +299,7 @@ export const registerWithFacebook = asyncHandler(async (req, res, next) => {
 export const confirmEmail = asyncHandler(async (req, res, next) => {
     const { otp } = req.body;
     const userId = req.session.userId;
-    console.log("session stuff: ",req.session);
+
     if (!userId) {
         const error = new AppError("Session expired, please login again", 401);
         return next(error);
@@ -486,7 +486,6 @@ export const login = asyncHandler(async (req, res, next) => {
             twoFactorOtpAttempts: 0,
         },
     });
-     console.log(`🚀 [Login OTP] for ${email}: ${otp}`);
 
     req.session.userId = user._id;
     req.session.isAuthenticated = false;
@@ -502,7 +501,6 @@ export const login = asyncHandler(async (req, res, next) => {
         statusCode: 200,
         message: "OTP sent to your email",
     });
-            console.log(`🚀 [Login OTP] for ${email}: ${otp}`);
 
 });
 
@@ -608,8 +606,6 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 export const resetPassword = asyncHandler(async (req, res, next) => {
     const { otp, newPassword } = req.body;
     const userId = req.session.userId;
-    console.log("🚀 ~ userId:", userId);
-
     const user = await findById({ model: User, id: userId });
     if (!user) {
         const error = new AppError("User not found", 404);

@@ -65,28 +65,21 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     if (initialId) {
       this.loadBook(initialId);
     }
-
-    // Listen to route parameter changes - this should fire when route params change
     const paramsSub = this.route.params.pipe(
       map(params => params['id']),
       distinctUntilChanged()
     ).subscribe(id => {
-      console.log('Route params changed, new book ID:', id);
       if (id) {
         this.loadBook(id);
       }
     });
 
-    // Also listen to router navigation events as a fallback
-    // This ensures we catch navigation even if params observable doesn't fire
     const routerSub = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
       map(() => this.route.snapshot.params['id']),
       filter(id => !!id),
       distinctUntilChanged()
     ).subscribe(id => {
-      console.log('Navigation end detected, book ID:', id);
-      // Only load if it's different from current book
       if (!this.book || this.book._id !== id) {
         this.loadBook(id);
       }
@@ -134,13 +127,10 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Don't reload if we already have this book loaded
     if (this.book && this.book._id === id && !this.isLoading) {
-      console.log('Book already loaded, skipping:', id);
       return;
     }
 
-    console.log('Loading book with ID:', id);
 
     // Reset state
     this.book = undefined;
@@ -150,7 +140,6 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     // Fetch book data
     this.bookService.getBookById(id).subscribe({
       next: (res) => {
-        console.log('Book loaded successfully:', res.data?._id);
         this.book = res.data;
         this.isLoading = false;
         // Check wishlist status

@@ -1,54 +1,11 @@
 <app-chat *ngIf="isUserLoggedIn && (role === 'user' || role === 'admin')"></app-chat>
 <div class="admin-layout">
   <!-- Sidebar -->
-  <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
-    <div class="sidebar-header">
-      <div class="logo">
-        <i class="fas fa-book-reader"></i>
-        <span *ngIf="!sidebarCollapsed">Ketabi Admin</span>
-      </div>
-      <button class="toggle-btn" (click)="toggleSidebar()">
-        <i class="fas" [class.fa-bars]="sidebarCollapsed" [class.fa-times]="!sidebarCollapsed"></i>
-      </button>
-    </div>
-
-    <nav class="sidebar-nav">
-      <a
-        *ngFor="let item of menuItems"
-        [routerLink]="item.route"
-        routerLinkActive="active"
-        class="nav-item"
-      >
-        <i [ngClass]="['fas', item.icon]"></i>
-        <span *ngIf="!sidebarCollapsed">{{ item.label }}</span>
-        <span class="badge" *ngIf="item.badge && !sidebarCollapsed">{{ item.badge }}</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="logout-btn" (click)="logout()">
-        <i class="fas fa-sign-out-alt"></i>
-        <span *ngIf="!sidebarCollapsed">Logout</span>
-      </button>
-    </div>
-  </aside>
+  <app-admin-sidebar></app-admin-sidebar>
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Top Bar -->
-    <header class="top-bar">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="text" placeholder="Search..." />
-      </div>
-
-      <div class="top-bar-actions">
-        <div class="user-menu">
-          <span class="user-name">{{ userName }}</span>
-          <i class="fas fa-chevron-down"></i>
-        </div>
-      </div>
-    </header>
+    <app-admin-topbar></app-admin-topbar>
 
     <!-- Page Content -->
     <div class="page-content">
@@ -178,15 +135,7 @@
 
         <!-- Filters and Search Section (Admin Only) -->
         <div class="filters-section" *ngIf="isAdmin">
-          <div class="search-box">
-            <i class="fas fa-search"></i>
-            <input
-              type="text"
-              placeholder="Search by user name or message..."
-              [(ngModel)]="searchTerm"
-              (input)="onSearch()"
-            />
-          </div>
+
 
           <div class="filters">
             <div class="filter-group">
@@ -215,103 +164,109 @@
         </div>
 
         <!-- Requests Table (Admin Only) -->
+        <!-- Replace your table-container section with this -->
         <div class="table-container" *ngIf="isAdmin">
+          <!-- Loading State -->
           <div *ngIf="loading" class="loading-state">
             <i class="fas fa-spinner fa-spin"></i>
             <p>Loading requests...</p>
           </div>
 
-          <div *ngIf="error" class="error-state">
+          <!-- Error State (only for actual errors, not empty data) -->
+          <div *ngIf="error && !loading" class="error-state">
             <i class="fas fa-exclamation-circle"></i>
             <p>{{ error }}</p>
             <button class="btn btn-primary" (click)="loadRequests()">Try Again</button>
           </div>
 
-          <table *ngIf="!loading && !error" class="requests-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Message</th>
-                <th>Submitted</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let request of filteredRequests">
-                <td>
-                  <div class="user-info">
-                    <img
-                      [src]="request.user?.avatar || 'https://via.placeholder.com/40'"
-                      [alt]="request.user?.name"
-                      class="user-avatar"
-                    />
-                    <div class="user-details">
-                      <div class="user-name">{{ request.user?.name || 'Unknown User' }}</div>
-                      <div class="user-email">{{ request.user?.email || 'N/A' }}</div>
+          <!-- Table (show even when empty) -->
+          <div *ngIf="!loading && !error">
+            <table class="requests-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Message</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Show rows if data exists -->
+                <tr *ngFor="let request of getPaginatedRequests()">
+                  <td>
+                    <div class="user-info">
+                      <div class="user-details">
+                        <div class="user-name">{{ request.user?.name || 'Unknown User' }}</div>
+                        <div class="user-email">{{ request.user?.email || 'N/A' }}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="message-cell">
-                    <p class="message-preview">{{ truncateMessage(request.message) }}</p>
-                  </div>
-                </td>
-                <td>
-                  <div class="date-cell">
-                    <i class="fas fa-calendar"></i>
-                    {{ formatDate(request.createdAt) }}
-                  </div>
-                </td>
-                <td>
-                  <span class="status-badge" [ngClass]="'status-' + request.status">
-                    <i [ngClass]="getStatusIcon(request.status)"></i>
-                    {{ request.status | titlecase }}
-                  </span>
-                </td>
-                <td>
-                  <div class="action-buttons">
-                    <button
-                      class="btn-icon btn-view"
-                      (click)="viewRequest(request)"
-                      title="View Details"
-                    >
-                      <i class="fas fa-eye"></i>
-                    </button>
-                    <button
-                      *ngIf="request.status === 'pending'"
-                      class="btn-icon btn-approve"
-                      (click)="approveRequest(request)"
-                      title="Approve"
-                    >
-                      <i class="fas fa-check"></i>
-                    </button>
-                    <button
-                      *ngIf="request.status === 'pending'"
-                      class="btn-icon btn-reject"
-                      (click)="rejectRequest(request)"
-                      title="Reject"
-                    >
-                      <i class="fas fa-times"></i>
-                    </button>
-                    <button
-                      class="btn-icon btn-delete"
-                      (click)="deleteRequest(request)"
-                      title="Delete"
-                    >
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                  <td>
+                    <div class="message-cell">
+                      <p class="message-preview">{{ truncateMessage(request.message) }}</p>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="date-cell">
+                      <i class="fas fa-calendar"></i>
+                      {{ formatDate(request.createdAt) }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-badge" [ngClass]="'status-' + request.status">
+                      <i [ngClass]="getStatusIcon(request.status)"></i>
+                      {{ request.status | titlecase }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button
+                        class="btn-icon btn-view"
+                        (click)="viewRequest(request)"
+                        title="View Details"
+                      >
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button
+                        *ngIf="request.status === 'pending'"
+                        class="btn-icon btn-approve"
+                        (click)="approveRequest(request)"
+                        title="Approve"
+                      >
+                        <i class="fas fa-check"></i>
+                      </button>
+                      <button
+                        *ngIf="request.status === 'pending'"
+                        class="btn-icon btn-reject"
+                        (click)="rejectRequest(request)"
+                        title="Reject"
+                      >
+                        <i class="fas fa-times"></i>
+                      </button>
+                      <button
+                        class="btn-icon btn-delete"
+                        (click)="deleteRequest(request)"
+                        title="Delete"
+                      >
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
 
-          <!-- Empty State -->
-          <div *ngIf="!loading && !error && filteredRequests.length === 0" class="empty-state">
-            <i class="fas fa-inbox"></i>
-            <h3>No Requests Found</h3>
-            <p>There are no publisher requests matching your criteria</p>
+                <!-- Empty state row (when no data) -->
+                <tr *ngIf="filteredRequests.length === 0" class="empty-row">
+                  <td colspan="5">
+                    <div class="empty-state">
+                      <i class="fas fa-inbox"></i>
+                      <h3>No Requests Found</h3>
+                      <p>There are no publisher requests matching your criteria</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

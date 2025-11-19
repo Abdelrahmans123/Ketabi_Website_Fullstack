@@ -28,10 +28,6 @@ export const notifyOrderConfirmed = async (order) => {
             orderStatus: order.orderStatus,
         },
     });
-
-    console.log(
-        `Order confirmed notification sent for order: ${order.orderNumber}`
-    );
 };
 
 
@@ -53,9 +49,6 @@ export const notifyPaymentSuccess = async (order) => {
             paymentStatus: order.paymentStatus,
         },
     });
-    console.log(
-        `Payment success notification sent for order: ${order.orderNumber}`
-    );
 };
 
 
@@ -74,9 +67,6 @@ export const notifyPaymentFailed = async (order, reason = "Unknown") => {
                 retryUrl: `/orders/${order._id}/retry`,
             },
         });
-        console.log(
-            `Payment failed notification sent for order: ${order.orderNumber}`
-        );
     };
 
 export const notifyOrderProcessing = async (order) => {
@@ -92,10 +82,6 @@ export const notifyOrderProcessing = async (order) => {
             estimatedDelivery: calculateEstimatedDelivery(),
         },
     });
-
-    console.log(
-        `Order processing notification sent for order: ${order.orderNumber}`
-    );
 };
 
 export const notifyOrderShipped = async (order, trackingNumber = null) => {
@@ -123,9 +109,6 @@ export const notifyOrderShipped = async (order, trackingNumber = null) => {
                 orderStatus: order.orderStatus,
             },
         });
-        console.log(
-            `Order shipped notification sent for order: ${order.orderNumber}`
-        );
     };
 
 
@@ -143,10 +126,6 @@ export const notifyOrderDelivered = async (order) => {
             reviewUrl: `/orders/${order._id}/review`,
         },
     });
-
-    console.log(
-        `Order delivered notification sent for order: ${order.orderNumber}`
-    );
 };
 
 
@@ -173,10 +152,6 @@ export const notifyOrderCancelled = async (order, reason = "User request") => {
                 orderStatus: order.orderStatus,
             },
         });
-
-        console.log(
-            `Order cancelled notification sent for order: ${order.orderNumber}`
-        );
     };
 
 export const notifyPaymentRefunded = async (order) => {
@@ -194,8 +169,6 @@ export const notifyPaymentRefunded = async (order) => {
             expectedCreditDays: getRefundCreditDays(order.paymentMethod),
         },
     });
-
-    console.log(`Refund notification sent for order: ${order.orderNumber}`);
 };
 
 
@@ -228,10 +201,6 @@ export const notifyGiftReceived = async (recipientUserId, order) => {
                 isGift: true,
             },
         });
-
-        console.log(
-            `Gift received notification sent for order: ${order.orderNumber}`
-        );
     };
 
 

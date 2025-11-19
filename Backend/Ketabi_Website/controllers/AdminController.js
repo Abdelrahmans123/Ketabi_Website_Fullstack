@@ -1,6 +1,8 @@
 import Book from "../models/Book.js";
 import { Order } from "../models/Order.js";
 import User from "../models/User.js";
+import { notifyLoggedOut } from "../services/deleteUser.js";
+import { getIO } from "../socketIO/index.js";
 import { orderStatus, paymentStatus } from "../utils/orderEnums.js";
 
 export const getBooksStats = async (req, res) => {
@@ -220,7 +222,7 @@ export const updateUsers = async (req, res) => {
 export const deleteUsers = async (req, res) => {
     try {
         const userId = req.params.id;
-
+        const io = getIO();
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({
@@ -230,13 +232,38 @@ export const deleteUsers = async (req, res) => {
         }
 
         await User.deleteOne({ _id: userId });
-
+        notifyLoggedOut(userId, io);
         res.status(200).json({
             success: true,
             message: "User deleted successfully",
         });
     } catch (error) {
         console.error("Error deleting user:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+};
+export const getAdminId = async (req, res) => {
+    try {
+        const adminUser = await User.findOne({ role: "admin" })
+            .select("_id")
+            .limit(1);
+        console.log("🚀 ~ getAdminId ~ adminUser:", adminUser);
+        if (!adminUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin user not found",
+            });
+        }
+        res.status(200).json({
+            success: true,
+            adminId: adminUser._id,
+        });
+    } catch (error) {
+        console.error("Error fetching admin ID:", error);
         res.status(500).json({
             success: false,
             message: "Internal server error",

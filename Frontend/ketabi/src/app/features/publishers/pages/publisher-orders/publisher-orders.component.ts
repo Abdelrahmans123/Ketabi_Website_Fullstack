@@ -67,7 +67,6 @@ export class PublisherOrdersComponent implements OnInit {
 
         this.publisherService.getPublisherOrders(publisherId, page, this.limit).subscribe({
             next: (response: PublisherOrdersResponse) => {
-                console.log('Backend:', response);
                 this.orders = response.data.orders || [];
                 this.totalPages = response.data.totalPages || 0;
                 this.total = response.data.total || 0;
@@ -128,7 +127,6 @@ export class PublisherOrdersComponent implements OnInit {
 
         this.publisherService.updatePublisherOrder(this.selectedOrder._id, updateData).subscribe({
             next: (response) => {
-                console.log('Backend:', response);
                 this.updating = false;
                 this.closeUpdateModal();
                
