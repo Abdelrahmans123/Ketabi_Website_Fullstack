@@ -107,6 +107,7 @@ export class Navbar implements OnInit, OnDestroy {
 
     this.socketSub = this.socketService.notifications$.subscribe({
       next: (notif) => {
+        console.log('🚀 ~ Navbar ~ subscribeToNotifications ~ notif:', notif);
         if (!notif) {
           return;
         }
@@ -157,6 +158,7 @@ export class Navbar implements OnInit, OnDestroy {
     this.showNotifications = !this.showNotifications;
 
     if (this.showNotifications) {
+      console.log('📖 Marking notifications as read');
       this.notificationCount = 0;
     }
   }
@@ -214,5 +216,19 @@ export class Navbar implements OnInit, OnDestroy {
     } else if (role === 'publisher') {
       this.router.navigate(['/orders']);
     }
+  }
+
+  // Debug method - call this to check notification system status
+  debugNotificationSystem() {
+    console.log('🐛 === NOTIFICATION SYSTEM DEBUG ===');
+    console.log('Socket connected:', this.socketService.isConnected());
+    console.log('Current user:', this.currentUser);
+    console.log('User ID:', this.currentUser?._id || this.currentUser?.id);
+    console.log('Is logged in:', this.isLoggedIn);
+    console.log('Socket subscription active:', !!this.socketSub);
+    console.log('Connection subscription active:', !!this.connectionSub);
+    console.log('Notification count:', this.notificationCount);
+    console.log('Total notifications:', this.notifications.length);
+    console.log('🐛 === END DEBUG ===');
   }
 }

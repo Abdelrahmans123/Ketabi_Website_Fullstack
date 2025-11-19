@@ -17,16 +17,76 @@ import { notifyOrderCancelled, notifyGiftReceived, notifyOrderConfirmed, notifyO
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
 
+// Custom middleware to capture raw body for Stripe webhooks
+const captureRawBody = (req, res, buf, encoding) => {
+  if (buf && buf.length) {
+    // preserve the original Buffer so signature verification uses the exact bytes Stripe sent
+    req.rawBody = buf;
+  }
+};
+
 router.post(
     "/stripe-webhook",
-    express.raw({ type: "application/json" }),
+    // express.raw({ type: "application/json" }),
+    express.raw({ type: "application/json", verify: captureRawBody }),
     async (req, res) => {
         const sig = req.headers["stripe-signature"];
         let event;
+        const body = req.rawBody ||  req.body;
+        // === DEBUG LOGGING ===
+        console.log('=== STRIPE WEBHOOK DEBUG ===');
+        console.log('stripe-signature header:', sig ? sig.substring(0, 30) + '...' : 'MISSING');
+        console.log('Content-Type:', req.headers['content-type']);
+        console.log('req.body type:', typeof req.body);
+        console.log('req.body is Buffer?', Buffer.isBuffer(req.body));
+        console.log('req.body length:', req.body ? req.body.length : 'N/A');
+if (Buffer.isBuffer(req.body)) {
+            const preview = req.body.toString('utf8', 0, Math.min(300, req.body.length));
+            console.log('req.body preview (first 300 chars):', preview);
+        }
+const secret = process.env.STRIPE_WEBHOOK_SECRET;
+        if (!secret) {
+            console.log('❌ STRIPE_WEBHOOK_SECRET is NOT SET!');
+        } else {
+            console.log('✅ STRIPE_WEBHOOK_SECRET length:', secret.length);
+            console.log('✅ STRIPE_WEBHOOK_SECRET value (full):', secret);
+        }
 
+
+// --- BEGIN TEMPORARY DEBUG: compute expected signature and compare ---
+try {
+    const crypto = await import('crypto').then(m => m.default || m);
+    const sigHeader = sig || '';
+    // parse timestamp and v1 from header
+    const headerParts = sigHeader.split(',');
+    const timestampPart = headerParts.find(p => p.startsWith('t='));
+    const v1Part = headerParts.find(p => p.startsWith('v1='));
+    const timestamp = timestampPart ? timestampPart.split('=')[1] : null;
+    const v1FromStripe = v1Part ? v1Part.split('=')[1] : null;
+
+    // prepare payload exactly as we'll sign it
+    const payloadString = Buffer.isBuffer(body) ? body.toString('utf8') : (typeof body === 'string' ? body : JSON.stringify(body));
+    const signedPayload = `${timestamp}.${payloadString}`;
+
+    // compute HMAC-SHA256
+    const expectedV1 = crypto.createHmac('sha256', process.env.STRIPE_WEBHOOK_SECRET)
+        .update(signedPayload, 'utf8')
+        .digest('hex');
+
+    console.log('--- STRIPE SIGNATURE DEBUG ---');
+    console.log('stripe header v1:', v1FromStripe);
+    console.log('computed expected v1:', expectedV1);
+    console.log('timestamp:', timestamp);
+    console.log('signedPayload length:', signedPayload.length);
+    console.log('signedPayload preview (first 300 chars):', signedPayload.substring(0, 300));
+    console.log('--- END SIGNATURE DEBUG ---');
+} catch (debugErr) {
+    console.error('Signature debug failed:', debugErr && debugErr.message ? debugErr.message : debugErr);
+}
+// --- END TEMPORARY DEBUG ---
         try {
             event = stripe.webhooks.constructEvent(
-                req.body,
+                body,
                 sig,
                 process.env.STRIPE_WEBHOOK_SECRET
             );
@@ -44,7 +104,7 @@ router.post(
         (async () => {
             try {
                 const order = await Order.findOne({ orderNumber });
-                switch (event.type) {
+switch (event.type) {
                     case "payment_intent.succeeded":
                         await handleSuccessfulPayment(order, paymentIntent);
                         break;

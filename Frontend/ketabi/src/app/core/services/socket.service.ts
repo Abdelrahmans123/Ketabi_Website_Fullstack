@@ -90,6 +90,8 @@ export class SocketService {
       this.socket.disconnect();
     }
 
+    console.log('🔌 Creating new socket instance...');
+
     this.socket = io(serverUrl, {
       extraHeaders: {
         authtoken: `Bearer ${token}`,
@@ -97,6 +99,8 @@ export class SocketService {
     });
 
     this.setupSocketListeners();
+
+    console.log('🔌 ========== END CONNECTION ATTEMPT ==========');
   }
 
   private setupSocketListeners(): void {
