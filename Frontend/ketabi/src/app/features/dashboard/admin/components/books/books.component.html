@@ -162,7 +162,7 @@
           <div *ngFor="let book of paginatedBooks" class="book-card">
             <div class="book-image">
               <img
-                [src]="book.image.url || 'https://via.placeholder.com/200x300'"
+                [src]="book.image.url || 'default-book.jpg'"
                 [alt]="book.name"
               />
               <div class="book-overlay">
