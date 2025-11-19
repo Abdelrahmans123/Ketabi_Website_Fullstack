@@ -134,15 +134,15 @@
                     [(ngModel)]="order.orderStatus"
                     (change)="updateOrderStatus(order, order.orderStatus)"
                   >
-                    <option value="pending" [selected]="order.orderStatus === 'pending'">Pending</option>
-                    <option value="processing" [selected]="order.orderStatus === 'processing'">
+                    <option value="pending" [selected]="order.orderStatus === 'Pending'">Pending</option>
+                    <option value="processing" [selected]="order.orderStatus === 'Processing'">
                       Processing
                     </option>
-                    <option value="shipped" [selected]="order.orderStatus === 'shipped'">Shipped</option>
-                    <option value="delivered" [selected]="order.orderStatus === 'delivered'">
+                    <option value="shipped" [selected]="order.orderStatus === 'Shipped'">Shipped</option>
+                    <option value="delivered" [selected]="order.orderStatus === 'Delivered'">
                       Delivered
                     </option>
-                    <option value="cancelled" [selected]="order.orderStatus === 'cancelled'">
+                    <option value="cancelled" [selected]="order.orderStatus === 'Cancelled'">
                       Cancelled
                     </option>
                   </select>
@@ -177,15 +177,15 @@
           </table>
         </div>
 
-        <!-- Empty State -->
-        <div *ngIf="!loading && !errorMessage && filteredOrders.length === 0" class="empty-state">
+  <!-- Empty State -->
+  <div *ngIf="!loading && !errorMessage && totalOrders === 0" class="empty-state">
           <i class="fas fa-shopping-cart"></i>
           <h3>No Orders Found</h3>
           <p>No orders match your search criteria</p>
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination" *ngIf="!loading && !errorMessage && filteredOrders.length > 0">
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="!loading && !errorMessage && totalOrders > 0">
           <div class="pagination-info">
             Showing {{ getPaginationInfo().start }} to {{ getPaginationInfo().end }} of
             {{ getPaginationInfo().total }} orders

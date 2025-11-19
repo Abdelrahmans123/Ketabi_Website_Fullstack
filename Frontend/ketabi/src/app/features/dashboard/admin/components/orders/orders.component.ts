@@ -24,8 +24,8 @@ interface Order {
     price: number;
   }>;
   finalPrice: number;
-  orderStatus: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  orderStatus: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  paymentStatus: 'Pending' | 'Completed' | 'Failed' | 'Refunded';
   paymentMethod: string;
   shippingAddress: {
     street: string;
@@ -70,6 +70,7 @@ export class OrdersComponent implements OnInit {
   currentPage = 1;
   pageSize = 10;
   totalPages = 1;
+  usingServerPagination = false;
   isUserLoggedIn = true;
   role = 'admin';
   // Modal
@@ -93,13 +94,62 @@ export class OrdersComponent implements OnInit {
   loadOrders() {
     this.loading = true;
     this.errorMessage = '';
+    // Build filter object to send to backend when using server-side pagination
+    const filters: any = {};
+    // Map frontend select values (lowercase) to backend enums (capitalized) expected by validation
+    const orderStatusMap: { [key: string]: string } = {
+      pending: 'Pending',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      completed: 'Completed',
+    };
+    const paymentStatusMap: { [key: string]: string } = {
+      pending: 'Pending',
+      paid: 'Completed',
+      failed: 'Failed',
+      refunded: 'Refunded',
+    };
 
-    this.orderService.getAllOrders(this.currentPage, this.pageSize).subscribe({
+    if (this.selectedStatus) {
+      const mapped = orderStatusMap[this.selectedStatus.toLowerCase()];
+      filters.orderStatus = mapped || this.selectedStatus;
+    }
+    if (this.selectedPaymentStatus) {
+      const mapped = paymentStatusMap[this.selectedPaymentStatus.toLowerCase()];
+      filters.paymentStatus = mapped || this.selectedPaymentStatus;
+    }
+    // Simple heuristic: if searchTerm contains @, treat as email; otherwise send as orderNumber
+    if (this.searchTerm && this.searchTerm.trim().length > 0) {
+      if (this.searchTerm.includes('@')) {
+        filters.email = this.searchTerm.trim();
+      } else {
+        filters.orderNumber = this.searchTerm.trim();
+      }
+    }
+
+    this.orderService.getAllOrders(this.currentPage, this.pageSize, filters).subscribe({
       next: (response) => {
-        let ordersArray = [];
-        ordersArray = response.data.orders;
+        // Response shape may be: { data: { orders: [...], pagination: { total, page, pages } } }
+        const payload = response?.data ? response.data : response;
+        const ordersArray = Array.isArray(payload?.orders) ? payload.orders : [];
+
         this.orders = [...ordersArray];
         this.filteredOrders = [...this.orders];
+
+        if (payload?.pagination) {
+          // Use server-side pagination metadata when available
+          this.usingServerPagination = true;
+          this.totalOrders = Number(payload.pagination.total) || this.orders.length;
+          this.currentPage = Number(payload.pagination.page) || this.currentPage;
+          this.totalPages = Number(payload.pagination.pages) || Math.ceil(this.totalOrders / this.pageSize);
+        } else {
+          this.usingServerPagination = false;
+          this.totalOrders = this.orders.length;
+          this.totalPages = Math.max(1, Math.ceil(this.totalOrders / this.pageSize));
+        }
+
         this.calculateStats();
         this.updatePagination();
         this.loading = false;
@@ -125,11 +175,11 @@ export class OrdersComponent implements OnInit {
   calculateStats() {
     this.totalOrders = this.orders.length;
     this.pendingOrders = this.orders.filter(
-      (o) => o.orderStatus === 'pending' || o.orderStatus === 'processing'
+      (o) => o.orderStatus === 'Pending' || o.orderStatus === 'Processing'
     ).length;
-    this.completedOrders = this.orders.filter((o) => o.orderStatus === 'delivered').length;
+    this.completedOrders = this.orders.filter((o) => o.orderStatus === 'Delivered').length;
     this.totalRevenue = this.orders
-      .filter((o) => o.paymentStatus === 'paid')
+      .filter((o) => o.paymentStatus === 'Completed')
       .reduce((sum, order) => sum + order.finalPrice, 0);
   }
 
@@ -142,6 +192,14 @@ export class OrdersComponent implements OnInit {
   }
 
   applyFilters() {
+    // If we're using server-side pagination, request the server (so it can apply filters).
+    if (this.usingServerPagination) {
+      // Reset to first page when filters change
+      this.currentPage = 1;
+      this.loadOrders();
+      return;
+    }
+
     this.filteredOrders = this.orders.filter((order) => {
       const matchesSearch =
         !this.searchTerm ||
@@ -194,22 +252,38 @@ export class OrdersComponent implements OnInit {
   }
 
   updatePagination() {
-    this.totalPages = Math.ceil(this.filteredOrders.length / this.pageSize);
-    const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.paginatedOrders = this.filteredOrders.slice(start, end);
+    if (this.usingServerPagination) {
+      // Server already sent the current page in `this.orders`
+      this.paginatedOrders = [...this.orders];
+      // Ensure totalPages is sane
+      this.totalPages = Math.max(1, this.totalPages);
+    } else {
+      this.totalPages = Math.ceil(this.filteredOrders.length / this.pageSize) || 1;
+      const start = (this.currentPage - 1) * this.pageSize;
+      const end = start + this.pageSize;
+      this.paginatedOrders = this.filteredOrders.slice(start, end);
+      this.totalOrders = this.filteredOrders.length;
+    }
   }
 
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
-      this.updatePagination();
+      if (this.usingServerPagination) {
+        this.loadOrders();
+      } else {
+        this.updatePagination();
+      }
     }
   }
 
   onPageSizeChange() {
     this.currentPage = 1;
-    this.updatePagination();
+    if (this.usingServerPagination) {
+      this.loadOrders();
+    } else {
+      this.updatePagination();
+    }
   }
 
   getPageNumbers(): number[] {
@@ -230,8 +304,8 @@ export class OrdersComponent implements OnInit {
 
   getPaginationInfo() {
     const start = (this.currentPage - 1) * this.pageSize + 1;
-    const end = Math.min(this.currentPage * this.pageSize, this.filteredOrders.length);
-    return { start, end, total: this.filteredOrders.length };
+    const end = Math.min(this.currentPage * this.pageSize, this.totalOrders);
+    return { start, end, total: this.totalOrders };
   }
 
   viewOrder(order: Order) {
@@ -243,6 +317,7 @@ export class OrdersComponent implements OnInit {
         } else if (response.order) {
           orderData = response.order;
         }
+        this.selectedOrder = orderData; // ensure modal has the fetched details
         this.modalMode = 'view';
         this.showOrderModal = true;
       },
