@@ -11,7 +11,7 @@ export const connectedUsersInfo = new Map();
 export const initializeIO = (server) => {
     io = new Server(server, {
         cors: {
-            origin: "http://localhost:4200",
+            origin: "*",
             methods: ["GET", "POST"],
             credentials: true,
             allowedHeaders: ["authtoken"],
