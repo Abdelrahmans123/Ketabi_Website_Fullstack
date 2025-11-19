@@ -96,8 +96,30 @@ export class OrdersComponent implements OnInit {
     this.errorMessage = '';
     // Build filter object to send to backend when using server-side pagination
     const filters: any = {};
-    if (this.selectedStatus) filters.orderStatus = this.selectedStatus;
-    if (this.selectedPaymentStatus) filters.paymentStatus = this.selectedPaymentStatus;
+    // Map frontend select values (lowercase) to backend enums (capitalized) expected by validation
+    const orderStatusMap: { [key: string]: string } = {
+      pending: 'Pending',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      completed: 'Completed',
+    };
+    const paymentStatusMap: { [key: string]: string } = {
+      pending: 'Pending',
+      paid: 'Completed',
+      failed: 'Failed',
+      refunded: 'Refunded',
+    };
+
+    if (this.selectedStatus) {
+      const mapped = orderStatusMap[this.selectedStatus.toLowerCase()];
+      filters.orderStatus = mapped || this.selectedStatus;
+    }
+    if (this.selectedPaymentStatus) {
+      const mapped = paymentStatusMap[this.selectedPaymentStatus.toLowerCase()];
+      filters.paymentStatus = mapped || this.selectedPaymentStatus;
+    }
     // Simple heuristic: if searchTerm contains @, treat as email; otherwise send as orderNumber
     if (this.searchTerm && this.searchTerm.trim().length > 0) {
       if (this.searchTerm.includes('@')) {
