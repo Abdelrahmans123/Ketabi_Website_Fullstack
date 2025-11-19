@@ -24,8 +24,8 @@ interface Order {
     price: number;
   }>;
   finalPrice: number;
-  orderStatus: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  orderStatus: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  paymentStatus: 'Pending' | 'Completed' | 'Failed' | 'Refunded';
   paymentMethod: string;
   shippingAddress: {
     street: string;
@@ -153,11 +153,11 @@ export class OrdersComponent implements OnInit {
   calculateStats() {
     this.totalOrders = this.orders.length;
     this.pendingOrders = this.orders.filter(
-      (o) => o.orderStatus === 'pending' || o.orderStatus === 'processing'
+      (o) => o.orderStatus === 'Pending' || o.orderStatus === 'Processing'
     ).length;
-    this.completedOrders = this.orders.filter((o) => o.orderStatus === 'delivered').length;
+    this.completedOrders = this.orders.filter((o) => o.orderStatus === 'Delivered').length;
     this.totalRevenue = this.orders
-      .filter((o) => o.paymentStatus === 'paid')
+      .filter((o) => o.paymentStatus === 'Completed')
       .reduce((sum, order) => sum + order.finalPrice, 0);
   }
 
