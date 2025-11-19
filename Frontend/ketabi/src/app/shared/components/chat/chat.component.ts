@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { SocketService, UserStatus } from '../../../core/services/socket.service';
+import { environment } from '../../../../environments/environment';
 import { ActivatedRoute } from '@angular/router';
 import Swal from 'sweetalert2';
 interface ChatMessage {
@@ -105,7 +106,7 @@ export class ChatComponent implements OnInit, OnDestroy {
       this.recipientName = 'Support';
     }
 
-    const serverUrl = 'http://localhost:3000';
+  const serverUrl = (environment.apiBaseUrl || window.location.origin).replace(/\/api\/?$/, '');
     this.subscriptions.push(
       this.socketService.connectionStatus$.subscribe((status) => {
         this.isConnected = status;
@@ -224,6 +225,7 @@ export class ChatComponent implements OnInit, OnDestroy {
         }
       })
     );
+    // Connect the socket to the computed server origin (strip any trailing /api)
     this.socketService.connect(serverUrl, token);
   }
   private markConversationsStale(): void {
