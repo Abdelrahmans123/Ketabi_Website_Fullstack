@@ -75,8 +75,8 @@ jobs:
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             
             # Pull latest images and restart containers
-            docker compose pull
-            docker compose up -d --remove-orphans
+            docker-compose pull
+            docker-compose up -d --remove-orphans
             
             # Cleanup old unused images to save disk space
             docker image prune -a -f
