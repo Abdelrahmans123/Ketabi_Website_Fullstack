@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import {
   AddToWishlistRequest,
   AddToWishlistResponse,
@@ -14,7 +15,7 @@ import {
   providedIn: 'root',
 })
 export class WishlistService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = environment.apiBaseUrl;
 
   private wishlistSubject = new BehaviorSubject<WishlistItem[]>([]);
   public wishlist$ = this.wishlistSubject.asObservable();

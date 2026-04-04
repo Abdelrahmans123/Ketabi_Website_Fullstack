@@ -9,8 +9,14 @@ dotenv.config();
 const REGION = process.env.AWS_REGION;
 const BUCKET = process.env.S3_BUCKET;
 
-if (!REGION || !BUCKET) {
-  throw new Error("Missing required AWS environment variables");
+if (!REGION || !BUCKET || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+  const missing = [];
+  if (!REGION) missing.push("AWS_REGION");
+  if (!BUCKET) missing.push("S3_BUCKET");
+  if (!process.env.AWS_ACCESS_KEY_ID) missing.push("AWS_ACCESS_KEY_ID");
+  if (!process.env.AWS_SECRET_ACCESS_KEY) missing.push("AWS_SECRET_ACCESS_KEY");
+  
+  throw new Error(`Missing required AWS environment variables: ${missing.join(", ")}`);
 }
 
 const s3Client = new S3Client({

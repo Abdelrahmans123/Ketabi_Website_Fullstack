@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { SocketService, UserStatus } from '../../../core/services/socket.service';
 import { ActivatedRoute } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 interface ChatMessage {
   content: string;
@@ -107,7 +108,7 @@ export class ChatComponent implements OnInit, OnDestroy {
       console.log('User chat initialized with admin recipientId:', this.recipientId);
     }
 
-    const serverUrl = 'http://localhost:3000';
+    const serverUrl = window.location.origin;
 
     // Subscribe to connection status
     this.subscriptions.push(

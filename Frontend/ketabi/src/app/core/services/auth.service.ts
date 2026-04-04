@@ -24,7 +24,7 @@ import { AuthTokens } from '../models/auth.model';
   providedIn: 'root',
 })
 export class AuthService {
-  private readonly API_URL = environment.apiBaseUrl || 'http://localhost:3000/api';
+  private readonly API_URL = environment.apiBaseUrl;
   private readonly TOKEN_KEY = 'token';
   private readonly REFRESH_TOKEN_KEY = 'refreshToken';
   private readonly SESSION_ID_KEY = 'sessionId';
