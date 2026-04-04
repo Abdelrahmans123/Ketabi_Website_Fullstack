@@ -1,0 +1,41 @@
+services:
+  # Redis Cache & Session Store
+  redis:
+    image: redis:alpine
+    container_name: ketabi_redis
+    restart: always
+    # Exposing 6379 for internal use; mapping to external port if needed for debugging
+    ports:
+      - "6379:6379"
+
+  # Backend Node.js API
+  backend:
+    build:
+      context: ./Backend/Ketabi_Website
+      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/ketabi-backend:latest
+    container_name: ketabi_backend
+    restart: always
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    depends_on:
+      - redis
+    # The API is proxied by Nginx on port 80; but can be exposed on 3000 for direct debugging
+    ports:
+      - "3000:3000"
+
+  # Frontend Angular SPA + Nginx Reverse Proxy
+  frontend:
+    build:
+      context: ./Frontend/ketabi
+      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/ketabi-frontend:latest
+    container_name: ketabi_frontend
+    restart: always
+    ports:
+      - "80:80"    # HTTP
+      - "443:443"  # HTTPS (Optional: requires Certbot setup)
+    depends_on:
+      - backend

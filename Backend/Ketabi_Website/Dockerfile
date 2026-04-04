@@ -1,19 +1,16 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Install dependencies first for caching
 COPY package*.json ./
-RUN npm install --production
+RUN npm install --omit=dev
+
+# Copy the rest of the application
 COPY . .
 
-RUN apk add --no-cache nginx redis
+# Expose the API port
+EXPOSE 3000
 
-# Copy official main nginx config (defines http{}, etc.)
-COPY --from=nginx:alpine /etc/nginx/nginx.conf /etc/nginx/nginx.conf
-
-# Copy only your server block file
-COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
-
-COPY .env .env
-EXPOSE 80
-
-CMD sh -c "redis-server --daemonize yes && npm start & nginx -g 'daemon off;'"
+# Start the application
+CMD ["npm", "start"]
