@@ -263,7 +263,7 @@ export const sendResponse = asyncHandler(async (req, res, next) => {
     const { message } = req.body;
     const userId = req.user._id;
     if (!message) {
-        return next(AppError("Message is required", 400));
+        return next(new AppError("Message is required", 400));
     }
     const newResponse = await create({
         model: Response,
@@ -294,5 +294,60 @@ export const getResponses = asyncHandler(async (req, res, next) => {
         statusCode: 200,
         message: "User responses retrieved successfully",
         data: responses,
+    });
+});
+export const getAllResponses = asyncHandler(async (req, res, next) => {
+    const responses = await findAll({
+        model: Response,
+        sort: { createdAt: -1 },
+        populate: { path: "userId", select: "name email role" },
+    });
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "All responses retrieved successfully",
+        data: responses,
+    });
+});
+export const updateResponses = asyncHandler(async (req, res, next) => {
+    const responseId = req.params.id;
+    const { status, message } = req.body;
+
+    const allowedStatuses = ["pending", "approved", "rejected"];
+    if (status && !allowedStatuses.includes(status)) {
+        return next(
+            new AppError(
+                `Invalid status. Allowed values are: ${allowedStatuses.join(
+                    ", "
+                )}`,
+                400
+            )
+        );
+    }
+
+    const updatedData = {};
+    if (status) updatedData.status = status;
+    if (message) updatedData.message = message;
+
+    const updatedResponse = await findByIdAndUpdate({
+        model: Response,
+        id: responseId,
+        data: updatedData,
+        populate: { path: "userId", select: "name email role" },
+    });
+
+    if (!updatedResponse) {
+        return next(new AppError("Response not found", 404));
+    }
+    if (status == "approved") {
+        await User.findByIdAndUpdate(updatedResponse.userId._id, {
+            role: "publisher",
+        });
+    }
+    return successResponse({
+        res,
+        statusCode: 200,
+        message: "Response updated successfully",
+        data: updatedResponse,
     });
 });

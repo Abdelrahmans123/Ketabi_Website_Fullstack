@@ -237,16 +237,13 @@
                 <th>Actions</th>
               </tr>
             </thead>
+            <!-- Fixed table row - replace your existing tbody -->
             <tbody>
-              <tr *ngFor="let request of filteredRequests">
+              <tr *ngFor="let request of getPaginatedRequests()">
                 <td>
                   <div class="user-info">
-                    <img
-                      [src]="request.user?.avatar || 'https://via.placeholder.com/40'"
-                      [alt]="request.user?.name"
-                      class="user-avatar"
-                    />
                     <div class="user-details">
+                      <!-- FIX: Use request.user instead of request.userId -->
                       <div class="user-name">{{ request.user?.name || 'Unknown User' }}</div>
                       <div class="user-email">{{ request.user?.email || 'N/A' }}</div>
                     </div>

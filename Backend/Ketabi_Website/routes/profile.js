@@ -159,6 +159,8 @@ import {
     getWishlist,
     sendResponse,
     getResponses,
+    getAllResponses,
+    updateResponses,
 } from "../controllers/ProfileController.js";
 import { authenticate } from "../middlewares/auth.js";  
 import { updateProfileSchema } from "../validations/updateprofile.js";
@@ -175,5 +177,6 @@ router.get("/wishlist", authenticate, getWishlist);
 router.post("/wishlist", authenticate, addToWishlist);
 router.delete("/wishlist/:bookId", authenticate, removeFromWishlist);
 router.post("/responses", authenticate, sendResponse);
-router.get("/responses", authenticate, getResponses);
+router.get("/responses", authenticate, getAllResponses);
+router.put("/responses/:id", authenticate, updateResponses);
 export default router;

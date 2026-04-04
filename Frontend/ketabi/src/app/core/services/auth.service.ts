@@ -80,7 +80,7 @@ export class AuthService {
   }
   getAdminId(): string | null {
     // Assuming admin ID is fixed; replace with actual logic if needed
-    return '68eb55652688714915d79019';
+    return '6901f6bc3c9e10af9c09b594';
   }
   private listenToStorageEvents(): void {
     // Only run in browser environment

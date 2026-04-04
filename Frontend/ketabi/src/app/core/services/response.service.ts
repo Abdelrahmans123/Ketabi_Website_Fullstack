@@ -5,19 +5,13 @@ import { environment } from '../../../environments/environment';
 
 export interface Response {
   _id: string;
-  userId: string;
-  user?: {
+  // userId: string;
+  userId?: {
     _id: string;
     name: string;
     email: string;
-    phone?: string;
     role: string;
-    avatar?: string;
   };
-  message: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface CreateResponseDTO {
@@ -30,9 +24,10 @@ export interface UpdateResponseDTO {
 }
 
 export interface ApiResponse<T> {
-  success: boolean;
+  status: 'success' | 'error' | 'fail'; // Use union type for type safety
   message: string;
   data: T;
+  code?: number;
 }
 
 @Injectable({
@@ -65,7 +60,7 @@ export class ResponseService {
 
   // Update a response (Admin approves/rejects)
   updateResponse(id: string, data: UpdateResponseDTO): Observable<ApiResponse<Response>> {
-    return this.http.patch<ApiResponse<Response>>(`${this.apiUrl}/${id}`, data);
+    return this.http.put<ApiResponse<Response>>(`${this.apiUrl}/${id}`, data);
   }
 
   // Delete a response
