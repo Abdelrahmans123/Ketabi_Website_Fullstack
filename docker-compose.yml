@@ -20,8 +20,10 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - NODE_ENV=production
+      - MONGO_URI=mongodb://root:rootpassword@mongodb:27017/ketabi?authSource=admin
     depends_on:
       - redis
+      - mongodb
     # The API is proxied by Nginx on port 80; but can be exposed on 3000 for direct debugging
     ports:
       - "3000:3000"
@@ -39,3 +41,20 @@ services:
       - "443:443"  # HTTPS (Optional: requires Certbot setup)
     depends_on:
       - backend
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:6-jammy
+    container_name: ketabi_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+      - MONGO_INITDB_DATABASE=ketabi
+
+volumes:
+  mongodb_data:
